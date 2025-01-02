@@ -1,22 +1,5 @@
-import { useState } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  Tabs,
-  Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  Button,
-} from '@mui/material';
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import { TeamMember, CollaborationEdge } from '../types/graph';
-import DownloadIcon from '@mui/icons-material/Download';
-import { COLLABORATION_COLORS } from '../types/graph';
 
 interface AnalysisPanelProps {
   data: {
@@ -24,221 +7,218 @@ interface AnalysisPanelProps {
     edges: CollaborationEdge[];
   };
   currentUser: string | null;
-  isAdmin?: boolean;
+  isAdmin: boolean;
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
+export default function AnalysisPanel({ data, currentUser, isAdmin }: AnalysisPanelProps) {
+  // Calculer les statistiques globales
+  const calculateGlobalStats = () => {
+    const totalEvaluations = data.edges.length;
+    const avgScore = data.edges.reduce((sum, edge) => sum + edge.score, 0) / totalEvaluations;
+    const maxScore = Math.max(...data.edges.map(edge => edge.score));
+    const minScore = Math.min(...data.edges.map(edge => edge.score));
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-}
-
-export default function AnalysisPanel({ data, currentUser, isAdmin = false }: AnalysisPanelProps) {
-  const [tabValue, setTabValue] = useState(0);
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
-  const calculateMemberStats = (memberId: string) => {
-    const outgoingEdges = data.edges.filter(edge => edge.source === memberId);
-    const incomingEdges = data.edges.filter(edge => edge.target === memberId);
-    
-    const avgOutgoing = outgoingEdges.reduce((acc, edge) => acc + edge.score, 0) / (outgoingEdges.length || 1);
-    const avgIncoming = incomingEdges.reduce((acc, edge) => acc + edge.score, 0) / (incomingEdges.length || 1);
-    
     return {
-      avgOutgoing,
-      avgIncoming,
-      perceptionGap: Math.abs(avgOutgoing - avgIncoming),
-      totalCollaborations: outgoingEdges.length + incomingEdges.length
+      totalEvaluations,
+      avgScore: avgScore.toFixed(2),
+      maxScore,
+      minScore,
     };
   };
 
-  const getRecommendation = (stats: ReturnType<typeof calculateMemberStats>) => {
-    if (stats.perceptionGap > 1.5) {
-      return { text: 'Échanger sur les perceptions', severity: 'warning' };
-    }
-    if (stats.avgIncoming < 2) {
-      return { text: 'Intensifier la collaboration', severity: 'error' };
-    }
-    if (stats.avgIncoming >= 3) {
-      return { text: 'Maintenir', severity: 'success' };
-    }
-    return { text: 'Améliorer progressivement', severity: 'info' };
+  // Créer la matrice d'évaluations croisées
+  const createCrossEvaluationMatrix = () => {
+    const matrix: { [key: string]: { [key: string]: number | null } } = {};
+    
+    // Initialiser la matrice avec des valeurs nulles
+    data.nodes.forEach(source => {
+      matrix[source.id] = {};
+      data.nodes.forEach(target => {
+        matrix[source.id][target.id] = null;
+      });
+    });
+
+    // Remplir la matrice avec les évaluations existantes
+    data.edges.forEach(edge => {
+      matrix[edge.source][edge.target] = edge.score;
+    });
+
+    return matrix;
   };
 
-  const getScoreColor = (score: number) => {
-    return COLLABORATION_COLORS[Math.floor(score) as keyof typeof COLLABORATION_COLORS];
-  };
-
-  const exportData = () => {
-    const csvContent = [
-      ['Membre', 'Rôle', 'Département', 'Score Moyen Donné', 'Score Moyen Reçu', 'Écart de Perception'],
-      ...data.nodes.map(member => {
-        const stats = calculateMemberStats(member.id);
-        return [
-          member.label,
-          member.role,
-          member.department,
-          stats.avgOutgoing.toFixed(2),
-          stats.avgIncoming.toFixed(2),
-          stats.perceptionGap.toFixed(2)
-        ];
-      })
-    ].map(row => row.join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'collaboration_analysis.csv';
-    link.click();
-  };
+  const globalStats = calculateGlobalStats();
+  const matrix = createCrossEvaluationMatrix();
 
   return (
-    <Paper sx={{ mt: 3 }}>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={tabValue} onChange={handleTabChange}>
-          <Tab label="Vue d'ensemble" />
-          <Tab label="Analyse détaillée" />
-          {isAdmin && <Tab label="Comparaison" />}
-        </Tabs>
+    <Box>
+      <Typography variant="h5" sx={{ 
+        mb: 4,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+        borderBottom: '2px solid black',
+        pb: 2
+      }}>
+        Vue d'Ensemble des Collaborations
+      </Typography>
+
+      {/* Statistiques globales */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+          Statistiques Globales
+        </Typography>
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 2,
+          mb: 3
+        }}>
+          <Paper sx={{ 
+            p: 2, 
+            textAlign: 'center',
+            border: '2px solid black',
+            borderRadius: 0,
+          }}>
+            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+              {globalStats.totalEvaluations}
+            </Typography>
+            <Typography variant="body2">
+              Évaluations Totales
+            </Typography>
+          </Paper>
+          <Paper sx={{ 
+            p: 2, 
+            textAlign: 'center',
+            border: '2px solid black',
+            borderRadius: 0,
+          }}>
+            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+              {globalStats.avgScore}
+            </Typography>
+            <Typography variant="body2">
+              Score Moyen
+            </Typography>
+          </Paper>
+          <Paper sx={{ 
+            p: 2, 
+            textAlign: 'center',
+            border: '2px solid black',
+            borderRadius: 0,
+          }}>
+            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+              {globalStats.maxScore}
+            </Typography>
+            <Typography variant="body2">
+              Score Maximum
+            </Typography>
+          </Paper>
+          <Paper sx={{ 
+            p: 2, 
+            textAlign: 'center',
+            border: '2px solid black',
+            borderRadius: 0,
+          }}>
+            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+              {globalStats.minScore}
+            </Typography>
+            <Typography variant="body2">
+              Score Minimum
+            </Typography>
+          </Paper>
+        </Box>
       </Box>
 
-      <TabPanel value={tabValue} index={0}>
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">Statistiques globales</Typography>
-          {isAdmin && (
-            <Button
-              startIcon={<DownloadIcon />}
-              onClick={exportData}
-              variant="outlined"
-            >
-              Exporter
-            </Button>
-          )}
-        </Box>
-
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Membre</TableCell>
-                <TableCell>Score moyen donné</TableCell>
-                <TableCell>Score moyen reçu</TableCell>
-                <TableCell>Écart de perception</TableCell>
-                <TableCell>Recommandation</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data.nodes
-                .filter(member => isAdmin || member.id === currentUser)
-                .map(member => {
-                  const stats = calculateMemberStats(member.id);
-                  const recommendation = getRecommendation(stats);
-                  return (
-                    <TableRow key={member.id}>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body1">{member.label}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {member.role} • {member.department}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography style={{ color: getScoreColor(stats.avgOutgoing) }}>
-                          {stats.avgOutgoing.toFixed(2)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography style={{ color: getScoreColor(stats.avgIncoming) }}>
-                          {stats.avgIncoming.toFixed(2)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{stats.perceptionGap.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={recommendation.text}
-                          color={recommendation.severity as any}
-                          size="small"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </TabPanel>
-
-      <TabPanel value={tabValue} index={1}>
-        <Typography variant="h6" gutterBottom>
-          Analyse des relations
+      {/* Matrice d'évaluations croisées */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+          Matrice des Évaluations Croisées
         </Typography>
-        <TableContainer>
+        <TableContainer component={Paper} sx={{ 
+          border: '2px solid black',
+          borderRadius: 0,
+        }}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>De</TableCell>
-                <TableCell>Vers</TableCell>
-                <TableCell>Score</TableCell>
-                <TableCell>Date</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid black' }}>
+                  Évaluateur ↓ / Évalué →
+                </TableCell>
+                {data.nodes.map(node => (
+                  <TableCell 
+                    key={node.id} 
+                    align="center"
+                    sx={{ 
+                      fontWeight: 'bold',
+                      borderBottom: '2px solid black',
+                      borderLeft: '1px solid #ddd',
+                    }}
+                  >
+                    {node.label}
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
-              {data.edges
-                .filter(edge => isAdmin || edge.source === currentUser || edge.target === currentUser)
-                .map((edge, index) => {
-                  const sourceMember = data.nodes.find(n => n.id === edge.source);
-                  const targetMember = data.nodes.find(n => n.id === edge.target);
-                  return (
-                    <TableRow key={index}>
-                      <TableCell>{sourceMember?.label}</TableCell>
-                      <TableCell>{targetMember?.label}</TableCell>
-                      <TableCell>
-                        <Typography style={{ color: getScoreColor(edge.score) }}>
-                          {edge.score}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(edge.timestamp).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+              {data.nodes.map(source => (
+                <TableRow key={source.id}>
+                  <TableCell sx={{ 
+                    fontWeight: 'bold',
+                    borderRight: '2px solid black',
+                  }}>
+                    {source.label}
+                  </TableCell>
+                  {data.nodes.map(target => (
+                    <TableCell 
+                      key={target.id} 
+                      align="center"
+                      sx={{
+                        backgroundColor: source.id === target.id ? '#f0f0f0' : 'inherit',
+                        borderLeft: '1px solid #ddd',
+                        fontWeight: matrix[source.id][target.id] !== null ? 'bold' : 'normal',
+                      }}
+                    >
+                      {source.id === target.id ? '-' : (matrix[source.id][target.id] ?? '×')}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </TableContainer>
-      </TabPanel>
+        <Typography variant="caption" sx={{ mt: 1, display: 'block', fontStyle: 'italic' }}>
+          × = Pas encore évalué | - = Non applicable
+        </Typography>
+      </Box>
 
-      {isAdmin && (
-        <TabPanel value={tabValue} index={2}>
-          <Typography variant="h6" gutterBottom>
-            Comparaison temporelle
-          </Typography>
-          <Typography color="text.secondary">
-            Fonctionnalité à venir : Comparaison des sociogrammes dans le temps
-          </Typography>
-        </TabPanel>
-      )}
-    </Paper>
+      {/* Légende des scores */}
+      <Box>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+          Légende des Scores
+        </Typography>
+        <Box sx={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          gap: 2
+        }}>
+          {[0, 1, 2, 3, 4].map(score => (
+            <Paper key={score} sx={{ 
+              p: 2,
+              border: '2px solid black',
+              borderRadius: 0,
+            }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                {score}
+              </Typography>
+              <Typography variant="body2">
+                {score === 0 ? 'Aucune collaboration' :
+                 score === 1 ? 'Collaboration rare' :
+                 score === 2 ? 'Collaboration occasionnelle' :
+                 score === 3 ? 'Collaboration régulière' :
+                 'Collaboration très forte'}
+              </Typography>
+            </Paper>
+          ))}
+        </Box>
+      </Box>
+    </Box>
   );
 } 
