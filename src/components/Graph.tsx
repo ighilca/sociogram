@@ -28,7 +28,7 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
     const graph = new Graph();
     graphRef.current = graph;
 
-    // Initialize sigma
+    // Initialize sigma with updated settings
     sigmaRef.current = new Sigma(graph, containerRef.current, {
       minCameraRatio: 0.1,
       maxCameraRatio: 5,
@@ -37,10 +37,12 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
       defaultNodeColor: '#4169E1',
       defaultEdgeColor: '#000000',
       renderLabels: true,
-      renderEdgeLabels: false,
+      renderEdgeLabels: true,
       labelSize: 14,
       labelWeight: 'bold',
       labelColor: { color: '#000000' },
+      edgeLabelSize: 12,
+      defaultEdgeType: 'arrow',
     });
 
     // Add drag events
@@ -144,68 +146,56 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
     // Clear existing edges
     graph.clearEdges();
 
-    // Create a map to store bidirectional scores
-    const bidirectionalEdges = new Map<string, { source: string; target: string; sourceToTarget: number; targetToSource: number | null }>();
+    // Process edges and create a map of bidirectional relationships
+    const edgeMap = new Map();
 
-    // Process all edges to identify bidirectional relationships
     data.edges.forEach((edge) => {
-      const edgeKey = [edge.source, edge.target].sort().join('-');
-      const existingEdge = bidirectionalEdges.get(edgeKey);
-
-      if (existingEdge) {
-        if (existingEdge.source === edge.source) {
-          existingEdge.sourceToTarget = edge.score;
-        } else {
-          existingEdge.targetToSource = edge.score;
-        }
+      const key = [edge.source, edge.target].sort().join('-');
+      if (!edgeMap.has(key)) {
+        edgeMap.set(key, { forward: null, backward: null });
+      }
+      const entry = edgeMap.get(key);
+      
+      if (edge.source < edge.target) {
+        entry.forward = edge;
       } else {
-        bidirectionalEdges.set(edgeKey, {
-          source: edge.source,
-          target: edge.target,
-          sourceToTarget: edge.score,
-          targetToSource: null
-        });
+        entry.backward = edge;
       }
     });
 
-    // Add edges to the graph with appropriate styling
-    bidirectionalEdges.forEach((edgeData) => {
-      const { source, target, sourceToTarget, targetToSource } = edgeData;
+    // Add edges to the graph
+    edgeMap.forEach(({ forward, backward }, key) => {
+      const [source, target] = key.split('-');
+      
+      if (forward && backward) {
+        // Bidirectional edges
+        graph.addDirectedEdge(forward.source, forward.target, {
+          type: 'arrow',
+          label: forward.score.toString(),
+          color: COLLABORATION_COLORS[forward.score as keyof typeof COLLABORATION_COLORS] || '#000000',
+          size: 2,
+        });
 
-      try {
-        // If there's a bidirectional relationship, create a curved edge
-        if (targetToSource !== null) {
-          // Edge from source to target (curved up)
-          graph.addEdge(source, target, {
-            size: 2,
-            color: COLLABORATION_COLORS[sourceToTarget as keyof typeof COLLABORATION_COLORS] || '#000000',
-            type: 'curvedArrow',
-            label: sourceToTarget.toString(),
-            forceLabel: true,
-          });
-
-          // Edge from target to source (curved down)
-          graph.addEdge(target, source, {
-            size: 2,
-            color: COLLABORATION_COLORS[targetToSource as keyof typeof COLLABORATION_COLORS] || '#000000',
-            type: 'curvedArrow',
-            label: targetToSource.toString(),
-            forceLabel: true,
-          });
-        } else {
-          // Single direction edge
-          graph.addEdge(source, target, {
-            size: 2,
-            color: COLLABORATION_COLORS[sourceToTarget as keyof typeof COLLABORATION_COLORS] || '#000000',
+        graph.addDirectedEdge(backward.source, backward.target, {
+          type: 'arrow',
+          label: backward.score.toString(),
+          color: COLLABORATION_COLORS[backward.score as keyof typeof COLLABORATION_COLORS] || '#000000',
+          size: 2,
+        });
+      } else {
+        // Unidirectional edge
+        const edge = forward || backward;
+        if (edge) {
+          graph.addDirectedEdge(edge.source, edge.target, {
             type: 'arrow',
-            label: sourceToTarget.toString(),
-            forceLabel: true,
+            label: edge.score.toString(),
+            color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
+            size: 2,
           });
         }
-      } catch (err) {
-        console.warn(`Impossible d'ajouter l'arête ${source}->${target}:`, err);
       }
     });
+
   }, [data, nodeSize]);
 
   return (
