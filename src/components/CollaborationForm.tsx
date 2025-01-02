@@ -11,6 +11,7 @@ export interface CollaborationFormProps {
   currentUser: string | null;
   onChangeEvaluator: (newEvaluatorId: string) => Promise<void>;
   selectedMember: string | null;
+  onSelectMember: (memberId: string) => void;
 }
 
 export default function CollaborationForm({ 
@@ -20,7 +21,8 @@ export default function CollaborationForm({
   members, 
   currentUser,
   onChangeEvaluator,
-  selectedMember
+  selectedMember,
+  onSelectMember
 }: CollaborationFormProps) {
   const [score, setScore] = useState<number>(0);
 
@@ -102,8 +104,8 @@ export default function CollaborationForm({
             COLLABORATEUR À ÉVALUER
           </Typography>
           <Select
-            value={selectedMember}
-            onChange={(e) => setSelectedMember(e.target.value as string)}
+            value={selectedMember || ''}
+            onChange={(e) => onSelectMember(e.target.value as string)}
             displayEmpty
             sx={{
               borderRadius: 0,

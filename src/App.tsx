@@ -628,6 +628,7 @@ function App() {
             currentUser={currentUser}
             onChangeEvaluator={handleChangeEvaluator}
             selectedMember={selectedMemberForEvaluation}
+            onSelectMember={setSelectedMemberForEvaluation}
           />
 
           <Snackbar
