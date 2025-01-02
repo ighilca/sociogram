@@ -141,16 +141,69 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
       }
     });
 
-    // Update edges
+    // Clear existing edges
     graph.clearEdges();
+
+    // Create a map to store bidirectional scores
+    const bidirectionalEdges = new Map<string, { source: string; target: string; sourceToTarget: number; targetToSource: number | null }>();
+
+    // Process all edges to identify bidirectional relationships
     data.edges.forEach((edge) => {
-      try {
-        graph.addEdge(edge.source, edge.target, {
-          size: 2,
-          color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
+      const edgeKey = [edge.source, edge.target].sort().join('-');
+      const existingEdge = bidirectionalEdges.get(edgeKey);
+
+      if (existingEdge) {
+        if (existingEdge.source === edge.source) {
+          existingEdge.sourceToTarget = edge.score;
+        } else {
+          existingEdge.targetToSource = edge.score;
+        }
+      } else {
+        bidirectionalEdges.set(edgeKey, {
+          source: edge.source,
+          target: edge.target,
+          sourceToTarget: edge.score,
+          targetToSource: null
         });
+      }
+    });
+
+    // Add edges to the graph with appropriate styling
+    bidirectionalEdges.forEach((edgeData) => {
+      const { source, target, sourceToTarget, targetToSource } = edgeData;
+
+      try {
+        // If there's a bidirectional relationship, create a curved edge
+        if (targetToSource !== null) {
+          // Edge from source to target (curved up)
+          graph.addEdge(source, target, {
+            size: 2,
+            color: COLLABORATION_COLORS[sourceToTarget as keyof typeof COLLABORATION_COLORS] || '#000000',
+            type: 'curvedArrow',
+            label: sourceToTarget.toString(),
+            forceLabel: true,
+          });
+
+          // Edge from target to source (curved down)
+          graph.addEdge(target, source, {
+            size: 2,
+            color: COLLABORATION_COLORS[targetToSource as keyof typeof COLLABORATION_COLORS] || '#000000',
+            type: 'curvedArrow',
+            label: targetToSource.toString(),
+            forceLabel: true,
+          });
+        } else {
+          // Single direction edge
+          graph.addEdge(source, target, {
+            size: 2,
+            color: COLLABORATION_COLORS[sourceToTarget as keyof typeof COLLABORATION_COLORS] || '#000000',
+            type: 'arrow',
+            label: sourceToTarget.toString(),
+            forceLabel: true,
+          });
+        }
       } catch (err) {
-        console.warn(`Impossible d'ajouter l'arête ${edge.source}->${edge.target}:`, err);
+        console.warn(`Impossible d'ajouter l'arête ${source}->${target}:`, err);
       }
     });
   }, [data, nodeSize]);
