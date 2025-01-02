@@ -476,6 +476,35 @@ function App() {
     setNotification(null);
   };
 
+  const handleChangeEvaluator = async (newEvaluatorId: string) => {
+    try {
+      console.log('Changement d\'évaluateur:', newEvaluatorId);
+      
+      // Vérifier que le membre existe
+      const { data: member, error: memberError } = await supabase
+        .from('team_members')
+        .select()
+        .eq('id', newEvaluatorId)
+        .single();
+
+      if (memberError) {
+        console.error('Erreur lors de la vérification du membre:', memberError);
+        throw memberError;
+      }
+
+      if (!member) {
+        throw new Error('Membre non trouvé');
+      }
+
+      setCurrentUser(newEvaluatorId);
+      setNotification({ message: 'Évaluateur changé avec succès', type: 'success' });
+    } catch (err) {
+      console.error('Erreur lors du changement d\'évaluateur:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du changement d\'évaluateur';
+      setNotification({ message: errorMessage, type: 'error' });
+    }
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <Container 
@@ -711,6 +740,7 @@ function App() {
             onSubmit={handleEvaluationSubmit}
             members={graphData.nodes}
             currentUser={currentUser}
+            onChangeEvaluator={handleChangeEvaluator}
           />
 
           <Snackbar
