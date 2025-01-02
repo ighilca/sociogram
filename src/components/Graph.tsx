@@ -14,6 +14,12 @@ interface GraphViewerProps {
   onEvaluate: (memberId: string) => void;
 }
 
+const calculateNodeSize = (nodeId: string, edges: CollaborationEdge[], baseSize: number): number => {
+  const receivedEvaluations = edges.filter(edge => edge.target === nodeId).length;
+  // Taille minimale = baseSize, augmente de 25% par évaluation reçue
+  return baseSize * (1 + (receivedEvaluations * 0.25));
+};
+
 export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sigmaRef = useRef<Sigma | null>(null);
@@ -130,7 +136,7 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
       if (graph.hasNode(node.id)) {
         // Update existing node
         graph.setNodeAttribute(node.id, 'label', node.label);
-        graph.setNodeAttribute(node.id, 'size', nodeSize);
+        graph.setNodeAttribute(node.id, 'size', calculateNodeSize(node.id, data.edges, nodeSize));
         // Don't update x,y to preserve position
       } else {
         // Add new node
@@ -138,7 +144,7 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
           ...node,
           x: Math.random() * 10 - 5,
           y: Math.random() * 10 - 5,
-          size: nodeSize,
+          size: calculateNodeSize(node.id, data.edges, nodeSize),
           color: '#4169E1',
           label: node.label,
         });
