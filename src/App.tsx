@@ -102,7 +102,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nodeSize, setNodeSize] = useState(10);
-  const sigmaRef = useRef<any>(null);
   const [showEvaluationForm, setShowEvaluationForm] = useState(false);
   const [selectedMemberForEvaluation, setSelectedMemberForEvaluation] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -286,119 +285,6 @@ function App() {
     } catch (err) {
       console.error('Error deleting member:', err);
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression du membre';
-      setNotification({ message: errorMessage, type: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleImportGraph = async (file: File) => {
-    try {
-      setLoading(true);
-      const text = await file.text();
-      const data = JSON.parse(text);
-      
-      if (!data.nodes || !data.edges) {
-        throw new Error('Format de fichier invalide');
-      }
-
-      // Validate node structure
-      const isValidNode = (node: any): node is TeamMember => {
-        return typeof node.id === 'string' &&
-               typeof node.label === 'string' &&
-               typeof node.role === 'string' &&
-               typeof node.department === 'string';
-      };
-
-      if (!data.nodes.every(isValidNode)) {
-        throw new Error('Structure des nœuds invalide');
-      }
-
-      const nodes = data.nodes.map((node: TeamMember) => ({
-        ...node,
-        x: node.x ?? Math.random() * 10 - 5,
-        y: node.y ?? Math.random() * 10 - 5,
-      }));
-      
-      setGraphData({ nodes, edges: data.edges });
-      setNotification({ message: 'Graphe importé avec succès', type: 'success' });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Échec de l'importation du fichier";
-      setError(errorMessage);
-      setNotification({ message: errorMessage, type: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateRandomGraph = async () => {
-    try {
-      setLoading(true);
-      const departments = ['Engineering', 'Design', 'Management', 'Marketing', 'Sales'];
-      const roles = ['Developer', 'Designer', 'Manager', 'Lead', 'Specialist'];
-      
-      const nodes: TeamMember[] = [];
-      const nodeCount = 5; // Reduced for better manageability
-
-      // Generate and insert random nodes
-      for (let i = 0; i < nodeCount; i++) {
-        const newMember = {
-          label: `Member ${i + 1}`,
-          role: roles[Math.floor(Math.random() * roles.length)],
-          department: departments[Math.floor(Math.random() * departments.length)],
-        };
-
-        const { data: insertedMember, error: memberError } = await supabase
-          .from('team_members')
-          .insert([newMember])
-          .select()
-          .single();
-
-        if (memberError) throw memberError;
-        if (insertedMember) {
-          nodes.push({
-            ...insertedMember,
-            x: Math.random() * 10 - 5,
-            y: Math.random() * 10 - 5,
-          });
-        }
-      }
-
-      // Generate and insert random collaborations
-      const edges: CollaborationEdge[] = [];
-      const edgeCount = 8; // Reduced for better manageability
-
-      for (let i = 0; i < edgeCount; i++) {
-        const source = nodes[Math.floor(Math.random() * nodes.length)].id;
-        const target = nodes[Math.floor(Math.random() * nodes.length)].id;
-        
-        if (source !== target) {
-          const newCollaboration = {
-            source,
-            target,
-            score: Math.floor(Math.random() * 4) + 1, // Score between 1 and 4
-            direction: 'outgoing' as const,
-            timestamp: new Date().toISOString(),
-          };
-
-          const { data: insertedEdge, error: edgeError } = await supabase
-            .from('collaborations')
-            .insert([newCollaboration])
-            .select()
-            .single();
-
-          if (edgeError) throw edgeError;
-          if (insertedEdge) {
-            edges.push(insertedEdge);
-          }
-        }
-      }
-
-      setGraphData({ nodes, edges });
-      setNotification({ message: 'Graphe aléatoire généré avec succès', type: 'success' });
-    } catch (err) {
-      console.error('Error generating random graph:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la génération du graphe aléatoire';
       setNotification({ message: errorMessage, type: 'error' });
     } finally {
       setLoading(false);

@@ -53,7 +53,7 @@ function TabPanel(props: TabPanelProps) {
 export default function AnalysisPanel({ data, currentUser, isAdmin = false }: AnalysisPanelProps) {
   const [tabValue, setTabValue] = useState(0);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
