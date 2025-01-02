@@ -1,14 +1,16 @@
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, FormControl, Box, Typography } from '@mui/material';
 import { TeamMember } from '../types/graph';
 import { useState } from 'react';
+import { SelectChangeEvent } from '@mui/material/Select';
 
-interface CollaborationFormProps {
+export interface CollaborationFormProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: { from: string; to: string; score: number }) => void;
+  onSubmit: (data: { from: string; to: string; score: number }) => Promise<void>;
   members: TeamMember[];
   currentUser: string | null;
-  onChangeEvaluator: (newEvaluatorId: string) => void;
+  onChangeEvaluator: (newEvaluatorId: string) => Promise<void>;
+  selectedMember: string | null;
 }
 
 export default function CollaborationForm({ 
@@ -17,24 +19,37 @@ export default function CollaborationForm({
   onSubmit, 
   members, 
   currentUser,
-  onChangeEvaluator 
+  onChangeEvaluator,
+  selectedMember
 }: CollaborationFormProps) {
-  const [selectedMember, setSelectedMember] = useState<string>('');
   const [score, setScore] = useState<number>(0);
 
   const handleSubmit = () => {
     if (!currentUser || !selectedMember) return;
+    
     onSubmit({
       from: currentUser,
       to: selectedMember,
-      score,
+      score
     });
+    
+    setScore(0);
+  };
+
+  const handleClose = () => {
+    setScore(0);
+    onClose();
+  };
+
+  const handleMemberChange = (event: SelectChangeEvent<string>) => {
+    const memberId = event.target.value;
+    onChangeEvaluator(memberId);
   };
 
   return (
     <Dialog 
       open={open} 
-      onClose={onClose}
+      onClose={handleClose}
       PaperProps={{
         sx: {
           borderRadius: 0,
@@ -58,7 +73,7 @@ export default function CollaborationForm({
           </Typography>
           <Select
             value={currentUser || ''}
-            onChange={(e) => onChangeEvaluator(e.target.value as string)}
+            onChange={handleMemberChange}
             displayEmpty
             sx={{
               borderRadius: 0,
@@ -161,7 +176,7 @@ export default function CollaborationForm({
         gap: 1
       }}>
         <Button 
-          onClick={onClose}
+          onClick={handleClose}
           variant="outlined"
           sx={{
             borderRadius: 0,
