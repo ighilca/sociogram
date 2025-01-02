@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Graph from 'graphology';
 import Sigma from 'sigma';
-import EdgeCurveProgram from "@sigma/edge-curve";
+import { EdgeCurvedArrowProgram } from "@sigma/edge-curve";
 import { TeamMember, CollaborationEdge } from '../types/graph';
 import { COLLABORATION_COLORS } from '../types/graph';
 
@@ -43,7 +43,7 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
       labelWeight: 'bold',
       labelColor: { color: '#000000' },
       edgeProgramClasses: {
-        curve: EdgeCurveProgram,
+        curvedArrow: EdgeCurvedArrowProgram,
       },
     });
 
@@ -153,10 +153,11 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
           size: 3,
           label: edge.score.toString(),
           color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
-          type: 'curve',
+          type: 'curvedArrow',
           forceLabel: true,
           labelSize: 12,
           labelColor: '#000000',
+          curvature: 0.3,
         });
       } catch (err) {
         console.warn(`Impossible d'ajouter l'arête ${edge.source}->${edge.target}:`, err);
