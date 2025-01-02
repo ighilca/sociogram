@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Graph from 'graphology';
 import Sigma from 'sigma';
+import EdgeCurveProgram from "@sigma/edge-curve";
 import { TeamMember, CollaborationEdge } from '../types/graph';
 import { COLLABORATION_COLORS } from '../types/graph';
 
@@ -41,6 +42,9 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
       labelSize: 14,
       labelWeight: 'bold',
       labelColor: { color: '#000000' },
+      edgeProgramClasses: {
+        curve: EdgeCurveProgram,
+      },
     });
 
     // Add drag events
@@ -149,7 +153,7 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
           size: 3,
           label: edge.score.toString(),
           color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
-          type: 'arrow',
+          type: 'curve',
           forceLabel: true,
           labelSize: 12,
           labelColor: '#000000',
