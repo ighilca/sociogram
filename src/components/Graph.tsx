@@ -42,7 +42,6 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
       labelWeight: 'bold',
       labelColor: { color: '#000000' },
       edgeLabelSize: 12,
-      defaultEdgeType: 'arrow',
     });
 
     // Add drag events
@@ -163,34 +162,54 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
       }
     });
 
-    // Add edges to the graph
+    // Add edges to the graph with offset control points
     edgeMap.forEach(({ forward, backward }, key) => {
-      const [source, target] = key.split('-');
-      
       if (forward && backward) {
-        // Bidirectional edges
-        graph.addDirectedEdge(forward.source, forward.target, {
-          type: 'arrow',
+        // Calculate control points for curved edges
+        const sourceNode = graph.getNodeAttributes(forward.source);
+        const targetNode = graph.getNodeAttributes(forward.target);
+        
+        // Calculate midpoint and perpendicular offset
+        const midX = (sourceNode.x + targetNode.x) / 2;
+        const midY = (sourceNode.y + targetNode.y) / 2;
+        const dx = targetNode.x - sourceNode.x;
+        const dy = targetNode.y - sourceNode.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const offset = len * 0.2;
+
+        // Create control points for both curves
+        const cp1 = {
+          x: midX + (dy / len) * offset,
+          y: midY - (dx / len) * offset
+        };
+        const cp2 = {
+          x: midX - (dy / len) * offset,
+          y: midY + (dx / len) * offset
+        };
+
+        // Add forward edge with control point
+        graph.addEdgeWithKey(`${key}-1`, forward.source, forward.target, {
+          size: 2,
           label: forward.score.toString(),
           color: COLLABORATION_COLORS[forward.score as keyof typeof COLLABORATION_COLORS] || '#000000',
-          size: 2,
+          controlPoints: [cp1],
         });
 
-        graph.addDirectedEdge(backward.source, backward.target, {
-          type: 'arrow',
+        // Add backward edge with control point
+        graph.addEdgeWithKey(`${key}-2`, backward.source, backward.target, {
+          size: 2,
           label: backward.score.toString(),
           color: COLLABORATION_COLORS[backward.score as keyof typeof COLLABORATION_COLORS] || '#000000',
-          size: 2,
+          controlPoints: [cp2],
         });
       } else {
         // Unidirectional edge
         const edge = forward || backward;
         if (edge) {
-          graph.addDirectedEdge(edge.source, edge.target, {
-            type: 'arrow',
+          graph.addEdgeWithKey(key, edge.source, edge.target, {
+            size: 2,
             label: edge.score.toString(),
             color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
-            size: 2,
           });
         }
       }
