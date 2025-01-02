@@ -8,9 +8,17 @@ interface CollaborationFormProps {
   onSubmit: (data: { from: string; to: string; score: number }) => void;
   members: TeamMember[];
   currentUser: string | null;
+  onChangeEvaluator: (newEvaluatorId: string) => void;
 }
 
-export default function CollaborationForm({ open, onClose, onSubmit, members, currentUser }: CollaborationFormProps) {
+export default function CollaborationForm({ 
+  open, 
+  onClose, 
+  onSubmit, 
+  members, 
+  currentUser,
+  onChangeEvaluator 
+}: CollaborationFormProps) {
   const [selectedMember, setSelectedMember] = useState<string>('');
   const [score, setScore] = useState<number>(0);
 
@@ -44,21 +52,37 @@ export default function CollaborationForm({ open, onClose, onSubmit, members, cu
         ÉVALUER LA COLLABORATION
       </DialogTitle>
       <DialogContent sx={{ mt: 2 }}>
-        {currentUser && (
-          <Typography 
-            variant="subtitle1" 
-            sx={{ 
-              mb: 2,
-              fontWeight: 'bold',
-              backgroundColor: '#f0f0f0',
-              p: 2,
+        <FormControl fullWidth sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+            ÉVALUATEUR
+          </Typography>
+          <Select
+            value={currentUser || ''}
+            onChange={(e) => onChangeEvaluator(e.target.value as string)}
+            sx={{
+              borderRadius: 0,
               border: '2px solid black',
+              backgroundColor: '#f0f0f0',
+              '&:hover': {
+                border: '2px solid black',
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                border: 'none',
+              },
             }}
           >
-            Évaluateur : {members.find(m => m.id === currentUser)?.label || 'Inconnu'}
-          </Typography>
-        )}
+            {members.map(member => (
+              <MenuItem key={member.id} value={member.id}>
+                {member.label} ({member.role})
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
         <FormControl fullWidth sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+            COLLABORATEUR À ÉVALUER
+          </Typography>
           <Select
             value={selectedMember}
             onChange={(e) => setSelectedMember(e.target.value as string)}
@@ -151,6 +175,7 @@ export default function CollaborationForm({ open, onClose, onSubmit, members, cu
         <Button 
           onClick={handleSubmit}
           variant="contained"
+          disabled={!currentUser || !selectedMember || score === undefined}
           sx={{
             borderRadius: 0,
             backgroundColor: '#000',
@@ -159,6 +184,11 @@ export default function CollaborationForm({ open, onClose, onSubmit, members, cu
             '&:hover': {
               backgroundColor: '#333',
               border: '2px solid black',
+            },
+            '&.Mui-disabled': {
+              backgroundColor: '#ccc',
+              color: '#666',
+              border: '2px solid #999',
             },
           }}
         >

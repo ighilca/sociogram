@@ -463,6 +463,11 @@ function App() {
     setNotification(null);
   };
 
+  const handleChangeEvaluator = (newEvaluatorId: string) => {
+    setCurrentUser(newEvaluatorId);
+    setNotification({ message: 'Évaluateur changé avec succès', type: 'success' });
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <Container 
@@ -698,6 +703,7 @@ function App() {
             onSubmit={handleEvaluationSubmit}
             members={graphData.nodes}
             currentUser={currentUser}
+            onChangeEvaluator={handleChangeEvaluator}
           />
 
           <Snackbar
