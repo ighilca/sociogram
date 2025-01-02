@@ -146,8 +146,13 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
     data.edges.forEach((edge) => {
       try {
         graph.addEdge(edge.source, edge.target, {
-          size: 2,
+          size: 3,
+          label: edge.score.toString(),
           color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
+          type: 'arrow',
+          forceLabel: true,
+          labelSize: 12,
+          labelColor: '#000000',
         });
       } catch (err) {
         console.warn(`Impossible d'ajouter l'arête ${edge.source}->${edge.target}:`, err);

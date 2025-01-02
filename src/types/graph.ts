@@ -28,9 +28,9 @@ export interface CollaborationScore {
 }
 
 export const COLLABORATION_COLORS = {
-  0: '#ef4444', // red - no collaboration
-  1: '#f97316', // orange - minimal
-  2: '#facc15', // yellow - moderate
-  3: '#84cc16', // lime - good
-  4: '#22c55e', // green - optimal
+  0: '#d32f2f', // rouge foncé - aucune collaboration
+  1: '#f57c00', // orange foncé - collaboration minimale
+  2: '#fbc02d', // jaune foncé - collaboration modérée
+  3: '#388e3c', // vert moyen - bonne collaboration
+  4: '#1b5e20', // vert foncé - collaboration optimale
 }; 
