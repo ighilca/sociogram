@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Container, Typography, Box, CircularProgress, Button, Alert, Snackbar, Tab, Tabs } from '@mui/material'
 import GraphViewer from './components/Graph'
 import Toolbar from './components/Toolbar'
@@ -627,6 +627,7 @@ function App() {
             members={graphData.nodes}
             currentUser={currentUser}
             onChangeEvaluator={handleChangeEvaluator}
+            selectedMember={selectedMemberForEvaluation}
           />
 
           <Snackbar

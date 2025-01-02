@@ -1,27 +1,26 @@
 import { useState } from 'react';
 import {
+  Box,
+  Typography,
+  Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
   TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Box,
-  Typography,
   IconButton,
   List,
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  Checkbox,
-  ListItemIcon,
-  Divider,
-  Alert,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
   SelectChangeEvent,
+  ListItemIcon,
+  Checkbox,
+  Alert
 } from '@mui/material';
 import { TeamMember } from '../types/graph';
 import EditIcon from '@mui/icons-material/Edit';
