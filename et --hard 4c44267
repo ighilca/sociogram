@@ -1,0 +1,16 @@
+[33mb0ed31a[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m fix: simplify app to use demo data only
+[33mdf02696[m fix: correct types and demo data for deployment
+[33mddad7e4[m feat: add demo mode with static data
+[33me8f50e1[m docs: add deployment status badge to README
+[33m5979f96[m ci: add Supabase environment variables to workflow
+[33m8e37b7d[m docs: update README with deployment information
+[33mf2aecdc[m[33m ([m[1;31morigin/feature/graph-interactions[m[33m, [m[1;32mfeature/graph-interactions[m[33m)[m chore: add GitHub Pages deployment configuration
+[33mc39d2a5[m feat: implement curved edges using control points
+[33me32ea02[m feat: add @sigma/edge-curve package for curved edges
+[33m4ce1b15[m feat: add bidirectional edge visualization in graph
+[33m4220a71[m feat: redesign analysis panel with cross-evaluation matrix and global stats
+[33md48e7ad[m feat: add evaluator selection in collaboration form
+[33m4c44267[m feat: add evaluator name display in collaboration form
+[33m1caf9e5[m first commit
+[33md661604[m first commit
+[33m3e31f28[m Initial commit: Sociogram application with graph visualization and collaboration features

@@ -238,6 +238,7 @@ function App() {
   const handleDeleteMember = async (id: string) => {
     try {
       setLoading(true);
+      console.log('Début de la suppression du membre:', id);
       
       // Delete collaborations where member is source
       const { error: sourceError } = await supabase
@@ -245,7 +246,11 @@ function App() {
         .delete()
         .eq('source', id);
 
-      if (sourceError) throw sourceError;
+      if (sourceError) {
+        console.error('Erreur lors de la suppression des collaborations source:', sourceError);
+        throw sourceError;
+      }
+      console.log('Collaborations source supprimées');
 
       // Delete collaborations where member is target
       const { error: targetError } = await supabase
@@ -253,7 +258,11 @@ function App() {
         .delete()
         .eq('target', id);
 
-      if (targetError) throw targetError;
+      if (targetError) {
+        console.error('Erreur lors de la suppression des collaborations target:', targetError);
+        throw targetError;
+      }
+      console.log('Collaborations target supprimées');
 
       // Then delete the member
       const { error: memberError } = await supabase
@@ -261,7 +270,11 @@ function App() {
         .delete()
         .eq('id', id);
 
-      if (memberError) throw memberError;
+      if (memberError) {
+        console.error('Erreur lors de la suppression du membre:', memberError);
+        throw memberError;
+      }
+      console.log('Membre supprimé avec succès');
 
       // Update local state
       setGraphData(prev => ({
