@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -23,6 +23,7 @@ import {
   Alert
 } from '@mui/material';
 import { TeamMember } from '../types/graph';
+import { supabase } from '../lib/supabase';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
@@ -41,8 +42,15 @@ interface MemberFormData {
   department: string;
 }
 
-const defaultDepartments = ['Engineering', 'Design', 'Management', 'Marketing', 'Sales'];
-const defaultRoles = ['Developer', 'Designer', 'Manager', 'Lead', 'Specialist'];
+interface Role {
+  id: string;
+  name: string;
+}
+
+interface Department {
+  id: string;
+  name: string;
+}
 
 export default function TeamManagement({
   members,
@@ -55,11 +63,42 @@ export default function TeamManagement({
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [showBulkAddDialog, setShowBulkAddDialog] = useState(false);
   const [bulkAddText, setBulkAddText] = useState('');
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [formData, setFormData] = useState<MemberFormData>({
     label: '',
     role: '',
     department: '',
   });
+
+  // Charger les rôles et départements au montage du composant
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Charger les rôles
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('roles')
+          .select('*')
+          .order('name');
+        
+        if (rolesError) throw rolesError;
+        setRoles(rolesData || []);
+
+        // Charger les départements
+        const { data: deptsData, error: deptsError } = await supabase
+          .from('departments')
+          .select('*')
+          .order('name');
+        
+        if (deptsError) throw deptsError;
+        setDepartments(deptsData || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleToggleSelect = (id: string) => {
     setSelectedMembers(prev => 
@@ -140,6 +179,8 @@ export default function TeamManagement({
       handleClose();
     } catch (error) {
       console.error('Error saving member:', error);
+      // Ne pas fermer le dialogue en cas d'erreur
+      // L'erreur sera affichée via la notification dans App.tsx
     }
   };
 
@@ -419,9 +460,9 @@ export default function TeamManagement({
                   },
                 }}
               >
-                {defaultRoles.map((role) => (
-                  <MenuItem key={role} value={role}>
-                    {role}
+                {roles.map((role) => (
+                  <MenuItem key={role.id} value={role.name}>
+                    {role.name}
                   </MenuItem>
                 ))}
               </Select>
@@ -444,9 +485,9 @@ export default function TeamManagement({
                   },
                 }}
               >
-                {defaultDepartments.map((dept) => (
-                  <MenuItem key={dept} value={dept}>
-                    {dept}
+                {departments.map((dept) => (
+                  <MenuItem key={dept.id} value={dept.name}>
+                    {dept.name}
                   </MenuItem>
                 ))}
               </Select>

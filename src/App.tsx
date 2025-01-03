@@ -128,10 +128,14 @@ function App() {
           throw new Error('Configuration Supabase manquante. Vérifiez votre fichier .env.');
         }
 
-        // Fetch data from Supabase
+        // Fetch data from Supabase with joins
         const { data: members, error: membersError } = await supabase
           .from('team_members')
-          .select('*');
+          .select(`
+            *,
+            roles (name),
+            departments (name)
+          `);
 
         if (membersError) throw membersError;
 
@@ -150,20 +154,18 @@ function App() {
           setCurrentUser(members[0].id);
         }
 
-        // Filter out any potential duplicate nodes by ID
-        const uniqueMembers = members.reduce((acc: any[], member: any) => {
-          if (!acc.find((m: any) => m.id === member.id)) {
-            acc.push(member);
-          }
-          return acc;
-        }, []);
+        // Transform members data to match our frontend model
+        const transformedMembers = members.map((member: any) => ({
+          id: member.id,
+          label: member.label,
+          role: member.roles.name,
+          department: member.departments.name,
+          x: Math.random() * 10 - 5,
+          y: Math.random() * 10 - 5,
+        }));
 
         setGraphData({
-          nodes: uniqueMembers.map((member: any) => ({
-            ...member,
-            x: Math.random() * 10 - 5,
-            y: Math.random() * 10 - 5,
-          })),
+          nodes: transformedMembers,
           edges: collaborations,
         });
 
@@ -182,33 +184,101 @@ function App() {
 
   const handleAddMember = async (member: Omit<TeamMember, 'id'>) => {
     try {
+      // Vérifier que les données sont valides
+      if (!member.label || !member.role || !member.department) {
+        throw new Error('Tous les champs sont obligatoires');
+      }
+
+      // 1. Obtenir le role_id
+      const { data: roleData, error: roleError } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', member.role)
+        .single();
+
+      if (roleError) {
+        console.error('Error getting role:', roleError);
+        throw new Error('Erreur lors de la récupération du rôle');
+      }
+
+      // 2. Obtenir le department_id
+      const { data: deptData, error: deptError } = await supabase
+        .from('departments')
+        .select('id')
+        .eq('name', member.department)
+        .single();
+
+      if (deptError) {
+        console.error('Error getting department:', deptError);
+        throw new Error('Erreur lors de la récupération du département');
+      }
+
+      // Formater les données pour Supabase
+      const memberData = {
+        label: member.label.trim(),
+        role_id: roleData.id,
+        department_id: deptData.id
+      };
+
       // Check if a member with the same label already exists
-      const { data: existingMembers } = await supabase
+      const { data: existingMembers, error: checkError } = await supabase
         .from('team_members')
         .select('label')
-        .eq('label', member.label);
+        .eq('label', memberData.label);
+
+      if (checkError) {
+        console.error('Error checking existing members:', checkError);
+        throw new Error('Erreur lors de la vérification des membres existants');
+      }
 
       if (existingMembers && existingMembers.length > 0) {
         throw new Error('Un membre avec ce nom existe déjà');
       }
 
-      const { data, error } = await supabase
+      // Insert new member
+      const { data, error: insertError } = await supabase
         .from('team_members')
-        .insert([member])
-        .select()
+        .insert(memberData)
+        .select(`
+          *,
+          roles (name),
+          departments (name)
+        `)
         .single();
 
-      if (error) throw error;
+      if (insertError) {
+        console.error('Error inserting member:', insertError);
+        if (insertError.code === '23505') {
+          throw new Error('Un membre avec ce nom existe déjà');
+        }
+        throw new Error('Erreur lors de l\'ajout du membre: ' + insertError.message);
+      }
+
+      if (!data) {
+        throw new Error('Aucune donnée retournée après l\'insertion');
+      }
+
+      // Update local state with the correct format
+      const newNode = {
+        id: data.id,
+        label: data.label,
+        role: data.roles.name,
+        department: data.departments.name,
+        x: Math.random() * 10 - 5,
+        y: Math.random() * 10 - 5
+      };
 
       setGraphData(prev => ({
         ...prev,
-        nodes: [...prev.nodes, { ...data, x: Math.random() * 10 - 5, y: Math.random() * 10 - 5 }],
+        nodes: [...prev.nodes, newNode],
       }));
 
       setNotification({ message: 'Membre ajouté avec succès', type: 'success' });
     } catch (err) {
+      console.error('Error in handleAddMember:', err);
       const errorMessage = err instanceof Error ? err.message : "Erreur lors de l'ajout du membre";
       setNotification({ message: errorMessage, type: 'error' });
+      throw err;
     }
   };
 

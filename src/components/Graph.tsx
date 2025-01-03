@@ -4,6 +4,7 @@ import Sigma from 'sigma';
 import { EdgeCurvedArrowProgram } from "@sigma/edge-curve";
 import { TeamMember, CollaborationEdge } from '../types/graph';
 import { COLLABORATION_COLORS } from '../types/graph';
+import { Box, Typography } from '@mui/material';
 
 interface GraphViewerProps {
   data: {
@@ -14,11 +15,56 @@ interface GraphViewerProps {
   onEvaluate: (memberId: string) => void;
 }
 
-const calculateNodeSize = (nodeId: string, edges: CollaborationEdge[], baseSize: number): number => {
-  const receivedEvaluations = edges.filter(edge => edge.target === nodeId).length;
-  // Taille minimale = baseSize, augmente de 25% par évaluation reçue
-  return baseSize * (1 + (receivedEvaluations * 0.25));
+const calculateAverageScore = (nodeId: string, edges: CollaborationEdge[]): number => {
+  const receivedEdges = edges.filter(edge => edge.target === nodeId);
+  return receivedEdges.length > 0
+    ? receivedEdges.reduce((sum, edge) => sum + edge.score, 0) / receivedEdges.length
+    : 0;
 };
+
+const calculateNodeSize = (nodeId: string, edges: CollaborationEdge[], baseSize: number): number => {
+  const avgScore = calculateAverageScore(nodeId, edges);
+  return baseSize * (1 + (avgScore * 0.5));
+};
+
+const calculateNodeColor = (nodeId: string, edges: CollaborationEdge[]): string => {
+  const avgScore = calculateAverageScore(nodeId, edges);
+  const roundedScore = Math.ceil(avgScore) as keyof typeof COLLABORATION_COLORS;
+  return COLLABORATION_COLORS[roundedScore] || COLLABORATION_COLORS[0];
+};
+
+const GraphLegend = () => (
+  <Box sx={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    gap: 3, 
+    mt: 2,
+    flexWrap: 'wrap',
+    padding: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+  }}>
+    {Object.entries(COLLABORATION_COLORS).map(([score, color]) => (
+      <Box key={score} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ 
+          width: 20, 
+          height: 20, 
+          borderRadius: '50%', 
+          backgroundColor: color,
+          border: '1px solid #000'
+        }} />
+        <Typography variant="body2">
+          Score {score} {score === '0' ? '(aucune collaboration)' : 
+                       score === '1' ? '(collaboration minimale)' :
+                       score === '2' ? '(collaboration modérée)' :
+                       score === '3' ? '(bonne collaboration)' :
+                       '(collaboration optimale)'}
+        </Typography>
+      </Box>
+    ))}
+  </Box>
+);
 
 export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -137,6 +183,7 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
         // Update existing node
         graph.setNodeAttribute(node.id, 'label', node.label);
         graph.setNodeAttribute(node.id, 'size', calculateNodeSize(node.id, data.edges, nodeSize));
+        graph.setNodeAttribute(node.id, 'color', calculateNodeColor(node.id, data.edges));
         // Don't update x,y to preserve position
       } else {
         // Add new node
@@ -145,7 +192,7 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
           x: Math.random() * 10 - 5,
           y: Math.random() * 10 - 5,
           size: calculateNodeSize(node.id, data.edges, nodeSize),
-          color: '#4169E1',
+          color: calculateNodeColor(node.id, data.edges),
           label: node.label,
         });
       }
@@ -172,14 +219,20 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
   }, [data, nodeSize]);
 
   return (
-    <div 
-      ref={containerRef} 
-      className="sigma-container"
-      style={{ 
-        height: '100%',
-        width: '100%',
-        cursor: isDragging ? 'grabbing' : 'grab'
-      }} 
-    />
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: '100%' }}>
+      <div 
+        ref={containerRef} 
+        className="sigma-container"
+        style={{ 
+          height: '600px',
+          width: '100%',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          backgroundColor: '#fff'
+        }} 
+      />
+      <GraphLegend />
+    </Box>
   );
 } 
