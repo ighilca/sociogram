@@ -4,6 +4,7 @@ import Sigma from 'sigma';
 import { EdgeCurvedArrowProgram } from "@sigma/edge-curve";
 import { TeamMember, CollaborationEdge } from '../types/graph';
 import { COLLABORATION_COLORS } from '../types/graph';
+import { Box, Typography } from '@mui/material';
 
 interface GraphViewerProps {
   data: {
@@ -172,14 +173,41 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
   }, [data, nodeSize]);
 
   return (
-    <div 
-      ref={containerRef} 
-      className="sigma-container"
-      style={{ 
-        height: '100%',
-        width: '100%',
-        cursor: isDragging ? 'grabbing' : 'grab'
-      }} 
-    />
+    <Box sx={{ position: 'relative', height: '100%', width: '100%' }}>
+      <div 
+        ref={containerRef} 
+        className="sigma-container"
+        style={{ 
+          height: '100%',
+          width: '100%',
+          cursor: isDragging ? 'grabbing' : 'grab'
+        }} 
+      />
+      <Box sx={{
+        position: 'absolute',
+        bottom: 16,
+        right: 16,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        padding: 2,
+        border: '2px solid black',
+        borderRadius: 0,
+      }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+          NIVEAU DE COLLABORATION
+        </Typography>
+        {Object.entries(COLLABORATION_COLORS).map(([score, color]) => (
+          <Box key={score} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+            <Box sx={{ 
+              width: 20, 
+              height: 3, 
+              backgroundColor: color,
+            }} />
+            <Typography variant="caption">
+              {score} {score === '0' ? '(Aucune)' : score === '4' ? '(Très forte)' : ''}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+    </Box>
   );
 } 
