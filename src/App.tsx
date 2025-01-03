@@ -102,6 +102,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nodeSize, setNodeSize] = useState(10);
+  const [nameFilter, setNameFilter] = useState('');
   const [showEvaluationForm, setShowEvaluationForm] = useState(false);
   const [selectedMemberForEvaluation, setSelectedMemberForEvaluation] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -515,22 +516,6 @@ function App() {
                 version alpha
               </Typography>
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<PersonAddIcon />}
-              onClick={() => setShowEvaluationForm(true)}
-              sx={{
-                backgroundColor: '#fff',
-                color: '#000',
-                '&:hover': {
-                  backgroundColor: '#000',
-                  color: '#fff',
-                },
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Nouvelle Évaluation
-            </Button>
           </Box>
           
           {error && (
@@ -566,6 +551,7 @@ function App() {
                 mb: 2,
               }}
             >
+              <Tab label="Nouvelle évaluation" />
               <Tab label="Visualisation" />
               <Tab label="Analyse" />
               {isAdmin && <Tab label="Administration" />}
@@ -575,17 +561,51 @@ function App() {
           <TabPanel value={currentTab} index={0}>
             <Box sx={{ 
               display: 'flex',
+              justifyContent: 'center',
+              width: '100%',
+            }}>
+              <Box sx={{ 
+                border: '2px solid black',
+                p: { xs: 3, sm: 4 },
+                backgroundColor: '#fff',
+                width: '100%',
+                maxWidth: '800px',
+                overflow: 'auto',
+                mb: 4,
+              }}>
+                <CollaborationForm
+                  open={true}
+                  onClose={() => {
+                    setShowEvaluationForm(false);
+                    setSelectedMemberForEvaluation(null);
+                    setCurrentTab(1); // Switch to Visualization tab after closing
+                  }}
+                  onSubmit={handleEvaluationSubmit}
+                  members={graphData.nodes}
+                  currentUser={currentUser}
+                  onChangeEvaluator={handleChangeEvaluator}
+                  selectedMember={selectedMemberForEvaluation}
+                  onSelectMember={setSelectedMemberForEvaluation}
+                  embedded={true}
+                />
+              </Box>
+            </Box>
+          </TabPanel>
+
+          <TabPanel value={currentTab} index={1}>
+            <Box sx={{ 
+              display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               width: '100%',
+              maxWidth: '100%',
             }}>
               <Box sx={{ 
                 border: '2px solid black',
                 p: { xs: 2, sm: 3 },
                 mb: 4,
                 backgroundColor: '#fff',
-                width: '100%',
-                maxWidth: '800px',
+                width: '80%',
                 overflow: 'auto',
               }}>
                 <Toolbar
@@ -609,34 +629,35 @@ function App() {
                   }}
                   nodeSize={nodeSize}
                   onNodeSizeChange={setNodeSize}
+                  nameFilter={nameFilter}
+                  onNameFilterChange={(value: string) => setNameFilter(value)}
                 />
               </Box>
 
               {loading ? (
-                <Box display="flex" justifyContent="center" alignItems="center" minHeight="600px" width="100%" maxWidth="800px">
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight="600px" width="80%">
                   <CircularProgress sx={{ color: '#000' }} />
                 </Box>
               ) : (
                 <Box sx={{ 
                   border: '2px solid black',
                   backgroundColor: '#fff',
-                  height: '70vh',
+                  height: '80vh',
+                  width: '80%',
                   overflow: 'hidden',
-                  width: '100%',
-                  maxWidth: '800px',
-                  mb: 4,
                 }}>
                   <GraphViewer 
                     data={graphData}
                     nodeSize={nodeSize}
                     onEvaluate={handleEvaluateClick}
+                    nameFilter={nameFilter}
                   />
                 </Box>
               )}
             </Box>
           </TabPanel>
 
-          <TabPanel value={currentTab} index={1}>
+          <TabPanel value={currentTab} index={2}>
             <Box sx={{ 
               display: 'flex',
               justifyContent: 'center',
@@ -661,7 +682,7 @@ function App() {
           </TabPanel>
 
           {isAdmin && (
-            <TabPanel value={currentTab} index={2}>
+            <TabPanel value={currentTab} index={3}>
               <Box sx={{ 
                 display: 'flex',
                 justifyContent: 'center',
@@ -686,20 +707,6 @@ function App() {
               </Box>
             </TabPanel>
           )}
-
-          <CollaborationForm
-            open={showEvaluationForm}
-            onClose={() => {
-              setShowEvaluationForm(false);
-              setSelectedMemberForEvaluation(null);
-            }}
-            onSubmit={handleEvaluationSubmit}
-            members={graphData.nodes}
-            currentUser={currentUser}
-            onChangeEvaluator={handleChangeEvaluator}
-            selectedMember={selectedMemberForEvaluation}
-            onSelectMember={setSelectedMemberForEvaluation}
-          />
 
           <Snackbar
             open={!!notification}

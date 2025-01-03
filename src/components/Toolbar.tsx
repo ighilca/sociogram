@@ -1,4 +1,4 @@
-import { Box, IconButton, Slider, Typography } from '@mui/material';
+import { Box, IconButton, Slider, Typography, TextField } from '@mui/material';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
@@ -9,6 +9,8 @@ interface ToolbarProps {
   onCenter: () => void;
   nodeSize: number;
   onNodeSizeChange: (size: number) => void;
+  nameFilter: string;
+  onNameFilterChange: (filter: string) => void;
 }
 
 export default function Toolbar({
@@ -17,6 +19,8 @@ export default function Toolbar({
   onCenter,
   nodeSize,
   onNodeSizeChange,
+  nameFilter,
+  onNameFilterChange,
 }: ToolbarProps) {
   return (
     <Box sx={{ 
@@ -109,6 +113,35 @@ export default function Toolbar({
             '& .MuiSlider-rail': {
               backgroundColor: '#ccc',
               height: 4,
+            },
+          }}
+        />
+      </Box>
+
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2,
+        flexGrow: 1,
+      }}>
+        <TextField
+          placeholder="Filtrer par nom..."
+          value={nameFilter}
+          onChange={(e) => onNameFilterChange(e.target.value)}
+          size="small"
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 0,
+              '& fieldset': {
+                borderColor: 'black',
+                borderWidth: 2,
+              },
+              '&:hover fieldset': {
+                borderColor: 'black',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: 'black',
+              },
             },
           }}
         />

@@ -134,12 +134,21 @@ export default function TeamManagement({
       const lines = bulkAddText.split('\n').filter(line => line.trim());
       
       for (const line of lines) {
-        const [label, role, department] = line.split(',').map(s => s.trim());
-        if (label && role && department) {
+        const [label, roleName, deptName] = line.split(',').map(s => s.trim());
+        if (label && roleName && deptName) {
+          // Vérifier si le rôle existe
+          const role = roles.find(r => r.name === roleName);
+          // Vérifier si le département existe
+          const dept = departments.find(d => d.name === deptName);
+          
+          if (!role || !dept) {
+            throw new Error(`Le rôle "${roleName}" ou le département "${deptName}" n'existe pas.`);
+          }
+          
           await onAddMember({
             label,
-            role: defaultRoles.includes(role) ? role : defaultRoles[0],
-            department: defaultDepartments.includes(department) ? department : defaultDepartments[0],
+            role: role.name,
+            department: dept.name,
           });
         }
       }
@@ -148,25 +157,20 @@ export default function TeamManagement({
       setBulkAddText('');
     } catch (error) {
       console.error('Error during bulk add:', error);
+      throw error;
     }
   };
 
   const handleTextChange = (field: keyof MemberFormData) => (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: event.target.value,
-    }));
+    setFormData(prev => ({ ...prev, [field]: event.target.value }));
   };
 
   const handleSelectChange = (field: keyof MemberFormData) => (
     event: SelectChangeEvent<string>
   ) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: event.target.value,
-    }));
+    setFormData(prev => ({ ...prev, [field]: event.target.value }));
   };
 
   const handleSubmit = async () => {
@@ -177,10 +181,8 @@ export default function TeamManagement({
         await onAddMember(formData);
       }
       handleClose();
-    } catch (error) {
-      console.error('Error saving member:', error);
-      // Ne pas fermer le dialogue en cas d'erreur
-      // L'erreur sera affichée via la notification dans App.tsx
+    } catch (err) {
+      console.error('Error saving member:', err);
     }
   };
 
@@ -206,11 +208,7 @@ export default function TeamManagement({
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce membre ?')) {
-      try {
-        await onDeleteMember(id);
-      } catch (error) {
-        console.error('Error deleting member:', error);
-      }
+      await onDeleteMember(id);
     }
   };
 
@@ -271,124 +269,77 @@ export default function TeamManagement({
         </Box>
       </Box>
 
-      {selectedMembers.length > 0 && (
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          p: 2,
-          border: '2px solid black',
-          backgroundColor: '#f8f8f8',
-        }}>
-          <Typography>
-            {selectedMembers.length} membre{selectedMembers.length > 1 ? 's' : ''} sélectionné{selectedMembers.length > 1 ? 's' : ''}
-          </Typography>
-          <Button
-            startIcon={<DeleteIcon />}
-            onClick={handleBulkDelete}
-            sx={{
-              color: '#ff0000',
-              borderColor: '#ff0000',
-              '&:hover': {
-                backgroundColor: '#ff0000',
-                color: '#fff',
-              },
-            }}
-          >
-            Supprimer la sélection
-          </Button>
-        </Box>
-      )}
-
       <List sx={{ width: '100%' }}>
-        <ListItem
-          sx={{
-            border: '2px solid black',
-            mb: 2,
-            backgroundColor: '#f0f0f0',
-          }}
-        >
+        <ListItem>
           <ListItemIcon>
             <Checkbox
+              edge="start"
               checked={selectedMembers.length === members.length}
               indeterminate={selectedMembers.length > 0 && selectedMembers.length < members.length}
               onChange={handleSelectAll}
-              sx={{
-                '&.Mui-checked': {
-                  color: '#000',
-                },
-              }}
             />
           </ListItemIcon>
           <ListItemText 
-            primary={
-              <Typography sx={{ fontWeight: 700 }}>
-                Tout sélectionner
-              </Typography>
-            }
+            primary="Tout sélectionner" 
+            sx={{ 
+              '& .MuiTypography-root': {
+                fontWeight: 500,
+              },
+            }}
           />
+          {selectedMembers.length > 0 && (
+            <Button
+              color="error"
+              onClick={handleBulkDelete}
+              sx={{
+                borderRadius: 0,
+                border: '2px solid #d32f2f',
+                '&:hover': {
+                  backgroundColor: '#ffebee',
+                },
+              }}
+            >
+              Supprimer ({selectedMembers.length})
+            </Button>
+          )}
         </ListItem>
-
         {members.map((member) => (
-          <ListItem
+          <ListItem 
             key={member.id}
             sx={{
-              border: '2px solid black',
-              mb: 2,
-              backgroundColor: '#fff',
+              borderBottom: '1px solid #eee',
               '&:hover': {
-                backgroundColor: '#f8f8f8',
+                backgroundColor: '#f5f5f5',
               },
             }}
           >
             <ListItemIcon>
               <Checkbox
+                edge="start"
                 checked={selectedMembers.includes(member.id)}
                 onChange={() => handleToggleSelect(member.id)}
-                sx={{
-                  '&.Mui-checked': {
-                    color: '#000',
-                  },
-                }}
               />
             </ListItemIcon>
             <ListItemText
-              primary={
-                <Typography sx={{ fontWeight: 700 }}>
-                  {member.label}
-                </Typography>
-              }
-              secondary={
-                <Typography variant="body2" sx={{ color: '#666' }}>
-                  {member.role} • {member.department}
-                </Typography>
-              }
+              primary={member.label}
+              secondary={`${member.role} • ${member.department}`}
+              sx={{
+                '& .MuiTypography-root': {
+                  fontWeight: member.label === 'Vous' ? 700 : 400,
+                },
+              }}
             />
             <ListItemSecondaryAction>
               <IconButton 
                 edge="end" 
-                onClick={() => handleEdit(member)} 
-                sx={{ 
-                  mr: 1,
-                  border: '1px solid black',
-                  '&:hover': {
-                    backgroundColor: '#000',
-                    color: '#fff',
-                  },
-                }}
+                onClick={() => handleEdit(member)}
+                sx={{ mr: 1 }}
               >
                 <EditIcon />
               </IconButton>
               <IconButton 
                 edge="end" 
                 onClick={() => handleDelete(member.id)}
-                sx={{ 
-                  border: '1px solid black',
-                  '&:hover': {
-                    backgroundColor: '#ff0000',
-                    color: '#fff',
-                  },
-                }}
               >
                 <DeleteIcon />
               </IconButton>
@@ -533,8 +484,8 @@ export default function TeamManagement({
         </DialogActions>
       </Dialog>
 
-      <Dialog 
-        open={showBulkAddDialog} 
+      <Dialog
+        open={showBulkAddDialog}
         onClose={() => setShowBulkAddDialog(false)}
         maxWidth="sm"
         fullWidth
@@ -554,28 +505,40 @@ export default function TeamManagement({
           Import CSV
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
-          <Alert severity="info" sx={{ mb: 2, borderRadius: 0 }}>
-            Format: Nom, Rôle, Département (un par ligne)
-          </Alert>
-          <TextField
-            multiline
-            rows={10}
-            value={bulkAddText}
-            onChange={(e) => setBulkAddText(e.target.value)}
-            placeholder="John Doe, Developer, Engineering
-Jane Smith, Designer, Design
-..."
-            fullWidth
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 0,
-                border: '2px solid black',
-                fontFamily: 'monospace',
-              },
-            }}
-          />
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 3,
+            p: 2,
+          }}>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Format: nom,rôle,département (un par ligne)
+            </Typography>
+            <TextField
+              multiline
+              rows={4}
+              value={bulkAddText}
+              onChange={(e) => setBulkAddText(e.target.value)}
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 0,
+                  border: '2px solid black',
+                  '&:hover': {
+                    borderColor: '#000',
+                  },
+                  '&.Mui-focused': {
+                    borderColor: '#000',
+                  },
+                },
+              }}
+            />
+          </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 3, borderTop: '2px solid black' }}>
+        <DialogActions sx={{ 
+          p: 3, 
+          borderTop: '2px solid black',
+        }}>
           <Button 
             onClick={() => setShowBulkAddDialog(false)}
             sx={{

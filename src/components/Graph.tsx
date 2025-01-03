@@ -13,6 +13,7 @@ interface GraphViewerProps {
   };
   nodeSize: number;
   onEvaluate: (memberId: string) => void;
+  nameFilter: string;
 }
 
 const calculateAverageScore = (nodeId: string, edges: CollaborationEdge[]): number => {
@@ -37,36 +38,46 @@ const GraphLegend = () => (
   <Box sx={{ 
     display: 'flex', 
     justifyContent: 'center', 
-    gap: 3, 
-    mt: 2,
-    flexWrap: 'wrap',
-    padding: 2,
+    alignItems: 'center',
+    gap: 2, 
+    mt: 1,
+    py: 1,
+    px: 2,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     border: '1px solid #ccc',
     borderRadius: '4px',
+    fontSize: '0.75rem',
+    whiteSpace: 'nowrap',
+    overflowX: 'auto',
   }}>
     {Object.entries(COLLABORATION_COLORS).map(([score, color]) => (
-      <Box key={score} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box key={score} sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 0.5,
+        minWidth: 'fit-content',
+      }}>
         <Box sx={{ 
-          width: 20, 
-          height: 20, 
+          width: 12, 
+          height: 12, 
           borderRadius: '50%', 
           backgroundColor: color,
-          border: '1px solid #000'
+          border: '1px solid #000',
+          flexShrink: 0,
         }} />
-        <Typography variant="body2">
-          Score {score} {score === '0' ? '(aucune collaboration)' : 
-                       score === '1' ? '(collaboration minimale)' :
-                       score === '2' ? '(collaboration modérée)' :
-                       score === '3' ? '(bonne collaboration)' :
-                       '(collaboration optimale)'}
+        <Typography variant="caption" sx={{ fontWeight: 500 }}>
+          {score === '0' ? 'Aucune' : 
+           score === '1' ? 'Minimale' :
+           score === '2' ? 'Modérée' :
+           score === '3' ? 'Bonne' :
+           'Optimale'}
         </Typography>
       </Box>
     ))}
   </Box>
 );
 
-export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerProps) {
+export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter }: GraphViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sigmaRef = useRef<Sigma | null>(null);
   const graphRef = useRef<Graph | null>(null);
@@ -167,67 +178,128 @@ export default function GraphViewer({ data, nodeSize, onEvaluate }: GraphViewerP
 
     const graph = graphRef.current;
 
-    // Update nodes
-    const existingNodes = new Set(graph.nodes());
-    
-    // Remove nodes that no longer exist
-    existingNodes.forEach(nodeId => {
-      if (!data.nodes.find(n => n.id === nodeId)) {
-        graph.dropNode(nodeId);
-      }
-    });
+    // Clear all existing nodes and edges
+    graph.clear();
 
-    // Add or update nodes
-    data.nodes.forEach((node) => {
-      if (graph.hasNode(node.id)) {
-        // Update existing node
-        graph.setNodeAttribute(node.id, 'label', node.label);
-        graph.setNodeAttribute(node.id, 'size', calculateNodeSize(node.id, data.edges, nodeSize));
-        graph.setNodeAttribute(node.id, 'color', calculateNodeColor(node.id, data.edges));
-        // Don't update x,y to preserve position
-      } else {
-        // Add new node
+    if (!nameFilter) {
+      // If no filter, show all nodes and edges
+      data.nodes.forEach((node) => {
         graph.addNode(node.id, {
           ...node,
           x: Math.random() * 10 - 5,
           y: Math.random() * 10 - 5,
           size: calculateNodeSize(node.id, data.edges, nodeSize),
           color: calculateNodeColor(node.id, data.edges),
-          label: node.label,
+          label: node.label || '',
         });
-      }
-    });
+      });
 
-    // Update edges
-    graph.clearEdges();
-    data.edges.forEach((edge) => {
-      try {
-        graph.addEdge(edge.source, edge.target, {
-          size: 3,
-          label: edge.score.toString(),
-          color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
-          type: 'curvedArrow',
-          forceLabel: true,
-          labelSize: 12,
-          labelColor: '#000000',
-          curvature: 0.3,
+      data.edges.forEach((edge) => {
+        try {
+          graph.addEdge(edge.source, edge.target, {
+            size: 3,
+            label: edge.score.toString(),
+            color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
+            type: 'curvedArrow',
+            forceLabel: true,
+            labelSize: 12,
+            labelColor: '#000000',
+            curvature: 0.3,
+          });
+        } catch (err) {
+          console.warn(`Impossible d'ajouter l'arête ${edge.source}->${edge.target}:`, err);
+        }
+      });
+    } else {
+      // Find nodes that match the filter
+      const filteredNodes = data.nodes.filter(node => 
+        node.label?.toLowerCase().includes(nameFilter.toLowerCase())
+      );
+
+      // Keep track of added nodes to avoid duplicates
+      const addedNodes = new Set<string>();
+
+      // For each filtered node, add it and its direct connections
+      filteredNodes.forEach(filteredNode => {
+        // Add the filtered node if not already added
+        if (!addedNodes.has(filteredNode.id)) {
+          graph.addNode(filteredNode.id, {
+            ...filteredNode,
+            x: 0, // Place filtered node at center
+            y: 0,
+            size: calculateNodeSize(filteredNode.id, data.edges, nodeSize),
+            color: calculateNodeColor(filteredNode.id, data.edges),
+            label: filteredNode.label || '',
+          });
+          addedNodes.add(filteredNode.id);
+        }
+
+        // Find all edges connected to this node
+        const connectedEdges = data.edges.filter(edge => 
+          edge.source === filteredNode.id || edge.target === filteredNode.id
+        );
+
+        // Add connected nodes and edges
+        connectedEdges.forEach((edge, index) => {
+          const connectedNodeId = edge.source === filteredNode.id ? edge.target : edge.source;
+          const connectedNode = data.nodes.find(n => n.id === connectedNodeId);
+
+          if (connectedNode && !addedNodes.has(connectedNode.id)) {
+            // Add connected node in a circle around the filtered node
+            const angle = (2 * Math.PI * index) / connectedEdges.length;
+            graph.addNode(connectedNode.id, {
+              ...connectedNode,
+              x: Math.cos(angle) * 5, // Arrange in a circle
+              y: Math.sin(angle) * 5,
+              size: calculateNodeSize(connectedNode.id, data.edges, nodeSize),
+              color: calculateNodeColor(connectedNode.id, data.edges),
+              label: connectedNode.label || '',
+            });
+            addedNodes.add(connectedNode.id);
+          }
+
+          // Add the edge if both nodes exist
+          if (addedNodes.has(edge.source) && addedNodes.has(edge.target)) {
+            try {
+              graph.addEdge(edge.source, edge.target, {
+                size: 3,
+                label: edge.score.toString(),
+                color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
+                type: 'curvedArrow',
+                forceLabel: true,
+                labelSize: 12,
+                labelColor: '#000000',
+                curvature: 0.3,
+              });
+            } catch (err) {
+              console.warn(`Impossible d'ajouter l'arête ${edge.source}->${edge.target}:`, err);
+            }
+          }
         });
-      } catch (err) {
-        console.warn(`Impossible d'ajouter l'arête ${edge.source}->${edge.target}:`, err);
-      }
-    });
-  }, [data, nodeSize]);
+      });
+    }
+
+    // Force a refresh of the graph
+    sigmaRef.current?.refresh();
+
+  }, [data, nodeSize, nameFilter]);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: '100%' }}>
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: 2, 
+      height: '100%',
+      width: '100%',
+    }}>
       <div 
         ref={containerRef} 
         className="sigma-container"
         style={{ 
-          height: '600px',
+          height: '100%',
           width: '100%',
           cursor: isDragging ? 'grabbing' : 'grab',
-          border: '1px solid #ccc',
+          border: '2px solid black',
           borderRadius: '4px',
           backgroundColor: '#fff'
         }} 

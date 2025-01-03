@@ -1,4 +1,4 @@
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, FormControl, Box, Typography } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, FormControl, Box, Typography, List, ListItem, ListItemText } from '@mui/material';
 import { TeamMember } from '../types/graph';
 import { useState } from 'react';
 import { SelectChangeEvent } from '@mui/material/Select';
@@ -6,12 +6,13 @@ import { SelectChangeEvent } from '@mui/material/Select';
 export interface CollaborationFormProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: { from: string; to: string; score: number }) => Promise<void>;
+  onSubmit: (data: { from: string; to: string; score: number }) => void;
   members: TeamMember[];
   currentUser: string | null;
-  onChangeEvaluator: (newEvaluatorId: string) => Promise<void>;
+  onChangeEvaluator: (newEvaluatorId: string) => void;
   selectedMember: string | null;
-  onSelectMember: (memberId: string) => void;
+  onSelectMember: (memberId: string | null) => void;
+  embedded?: boolean;
 }
 
 export default function CollaborationForm({ 
@@ -22,24 +23,37 @@ export default function CollaborationForm({
   currentUser,
   onChangeEvaluator,
   selectedMember,
-  onSelectMember
+  onSelectMember,
+  embedded = false
 }: CollaborationFormProps) {
-  const [score, setScore] = useState<number>(0);
+  const [scores, setScores] = useState<Record<string, number>>({});
 
-  const handleSubmit = () => {
-    if (!currentUser || !selectedMember) return;
+  const handleSubmit = (memberId: string, score: number) => {
+    if (!currentUser) return;
     
     onSubmit({
       from: currentUser,
-      to: selectedMember,
+      to: memberId,
       score
     });
     
-    setScore(0);
+    setScores(prev => ({
+      ...prev,
+      [memberId]: score
+    }));
+  };
+
+  const handleBulkSubmit = () => {
+    const allScores = Object.entries(scores);
+    if (allScores.length === 0) return;
+    
+    allScores.forEach(([memberId, score]) => {
+      handleSubmit(memberId, score);
+    });
   };
 
   const handleClose = () => {
-    setScore(0);
+    setScores({});
     onClose();
   };
 
@@ -47,6 +61,137 @@ export default function CollaborationForm({
     const memberId = event.target.value;
     onChangeEvaluator(memberId);
   };
+
+  const formContent = (
+    <Box>
+      <FormControl fullWidth sx={{ mb: 4 }}>
+        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+          ÉVALUATEUR
+        </Typography>
+        <Select
+          value={currentUser || ''}
+          onChange={handleMemberChange}
+          displayEmpty
+          sx={{
+            borderRadius: 0,
+            border: '2px solid black',
+            '&:hover': {
+              border: '2px solid black',
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              border: 'none',
+            },
+          }}
+        >
+          <MenuItem value="" disabled>
+            Sélectionner l'évaluateur
+          </MenuItem>
+          {members.map(member => (
+            <MenuItem key={member.id} value={member.id}>
+              {member.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
+        {members
+          .filter(member => member.id !== currentUser)
+          .map(member => (
+            <ListItem
+              key={member.id}
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                py: 2,
+                borderBottom: '1px solid #eee',
+              }}
+            >
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                  {member.label}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {member.role}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                {[0, 1, 2, 3, 4].map((value) => (
+                  <Button
+                    key={value}
+                    onClick={() => handleSubmit(member.id, value)}
+                    variant={scores[member.id] === value ? 'contained' : 'outlined'}
+                    disabled={!currentUser}
+                    sx={{
+                      minWidth: '36px',
+                      height: '36px',
+                      p: 0,
+                      borderRadius: 0,
+                      border: '1px solid black',
+                      backgroundColor: scores[member.id] === value ? '#000' : '#fff',
+                      color: scores[member.id] === value ? '#fff' : '#000',
+                      '&:hover': {
+                        backgroundColor: scores[member.id] === value ? '#000' : '#f0f0f0',
+                        border: '1px solid black',
+                      },
+                      '&.Mui-disabled': {
+                        backgroundColor: '#f5f5f5',
+                        color: '#ccc',
+                        border: '1px solid #ccc',
+                      },
+                    }}
+                  >
+                    {value}
+                  </Button>
+                ))}
+              </Box>
+            </ListItem>
+          ))}
+      </List>
+
+      <Box sx={{ 
+        display: 'flex',
+        justifyContent: 'center',
+        mt: 3,
+        pt: 3,
+        borderTop: '1px solid #eee',
+      }}>
+        <Button
+          variant="contained"
+          fullWidth
+          onClick={handleBulkSubmit}
+          sx={{
+            borderRadius: 0,
+            backgroundColor: '#ccc',
+            color: '#000',
+            border: '1px solid #ccc',
+            '&:hover': {
+              backgroundColor: '#999',
+              border: '1px solid #999',
+            },
+          }}
+        >
+          ENREGISTRER TOUTES LES ÉVALUATIONS
+        </Button>
+      </Box>
+    </Box>
+  );
+
+  if (embedded) {
+    return (
+      <Box>
+        <Typography variant="h6" sx={{ 
+          mb: 4,
+          fontWeight: 'bold',
+          textTransform: 'uppercase' as const
+        }}>
+          ÉVALUER LES COLLABORATIONS
+        </Typography>
+        {formContent}
+      </Box>
+    );
+  }
 
   return (
     <Dialog 
@@ -68,148 +213,9 @@ export default function CollaborationForm({
       }}>
         ÉVALUER LA COLLABORATION
       </DialogTitle>
-      <DialogContent sx={{ mt: 2 }}>
-        <FormControl fullWidth sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-            ÉVALUATEUR
-          </Typography>
-          <Select
-            value={currentUser || ''}
-            onChange={handleMemberChange}
-            displayEmpty
-            sx={{
-              borderRadius: 0,
-              border: '2px solid black',
-              '&:hover': {
-                border: '2px solid black',
-              },
-              '& .MuiOutlinedInput-notchedOutline': {
-                border: 'none',
-              },
-            }}
-          >
-            <MenuItem value="" disabled>
-              Sélectionner l'évaluateur
-            </MenuItem>
-            {members.map(member => (
-              <MenuItem key={member.id} value={member.id}>
-                {member.label} ({member.role})
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl fullWidth sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-            COLLABORATEUR À ÉVALUER
-          </Typography>
-          <Select
-            value={selectedMember || ''}
-            onChange={(e) => onSelectMember(e.target.value as string)}
-            displayEmpty
-            sx={{
-              borderRadius: 0,
-              border: '2px solid black',
-              '&:hover': {
-                border: '2px solid black',
-              },
-              '& .MuiOutlinedInput-notchedOutline': {
-                border: 'none',
-              },
-            }}
-          >
-            <MenuItem value="" disabled>
-              Sélectionner un collaborateur
-            </MenuItem>
-            {members
-              .filter(member => member.id !== currentUser)
-              .map(member => (
-                <MenuItem key={member.id} value={member.id}>
-                  {member.label} ({member.role})
-                </MenuItem>
-              ))
-            }
-          </Select>
-        </FormControl>
-
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="h6" sx={{ 
-            mb: 2,
-            fontWeight: 'bold',
-            textTransform: 'uppercase'
-          }}>
-            NIVEAU DE COLLABORATION
-          </Typography>
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 1,
-            mb: 1
-          }}>
-            {[0, 1, 2, 3, 4].map((value) => (
-              <Button
-                key={value}
-                onClick={() => setScore(value)}
-                variant={score === value ? 'contained' : 'outlined'}
-                sx={{
-                  minWidth: '48px',
-                  height: '48px',
-                  borderRadius: 0,
-                  border: '2px solid black',
-                  backgroundColor: score === value ? '#000' : '#fff',
-                  color: score === value ? '#fff' : '#000',
-                  '&:hover': {
-                    backgroundColor: score === value ? '#000' : '#f0f0f0',
-                    border: '2px solid black',
-                  },
-                }}
-              >
-                {value}
-              </Button>
-            ))}
-          </Box>
-          <Typography variant="caption" sx={{ fontStyle: 'italic' }}>
-            0 = Aucune collaboration, 4 = Collaboration très forte
-          </Typography>
-        </Box>
+      <DialogContent>
+        {formContent}
       </DialogContent>
-      <DialogActions sx={{ 
-        p: 2,
-        borderTop: '2px solid black',
-        gap: 1
-      }}>
-        <Button 
-          onClick={handleClose}
-          variant="outlined"
-          sx={{
-            borderRadius: 0,
-            border: '2px solid black',
-            color: '#000',
-            '&:hover': {
-              backgroundColor: '#f0f0f0',
-              border: '2px solid black',
-            },
-          }}
-        >
-          ANNULER
-        </Button>
-        <Button 
-          onClick={handleSubmit}
-          variant="contained"
-          disabled={!currentUser || !selectedMember}
-          sx={{
-            borderRadius: 0,
-            backgroundColor: '#000',
-            color: '#fff',
-            border: '2px solid black',
-            '&:hover': {
-              backgroundColor: '#333',
-              border: '2px solid black',
-            },
-          }}
-        >
-          ÉVALUER
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 } 
