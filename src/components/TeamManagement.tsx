@@ -33,6 +33,7 @@ interface TeamManagementProps {
   onAddMember: (member: Omit<TeamMember, 'id'>) => Promise<void>;
   onUpdateMember: (id: string, member: Partial<TeamMember>) => Promise<void>;
   onDeleteMember: (id: string) => Promise<void>;
+  setNotification?: (notification: { message: string; type: 'success' | 'error' }) => void;
 }
 
 interface MemberFormData {
@@ -56,6 +57,7 @@ export default function TeamManagement({
   onAddMember,
   onUpdateMember,
   onDeleteMember,
+  setNotification,
 }: TeamManagementProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
@@ -69,6 +71,8 @@ export default function TeamManagement({
     role: '',
     department: '',
   });
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [membersToDelete, setMembersToDelete] = useState<string[]>([]);
 
   // Charger les rôles et départements au montage du composant
   useEffect(() => {
@@ -116,44 +120,127 @@ export default function TeamManagement({
   };
 
   const handleBulkDelete = async () => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer ${selectedMembers.length} membres ?`)) {
-      try {
-        for (const id of selectedMembers) {
-          await onDeleteMember(id);
-        }
-        setSelectedMembers([]);
-      } catch (error) {
-        console.error('Error during bulk delete:', error);
+    setMembersToDelete(selectedMembers);
+    setShowDeleteConfirmDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      for (const id of membersToDelete) {
+        await onDeleteMember(id);
       }
+      setSelectedMembers([]);
+      setShowDeleteConfirmDialog(false);
+    } catch (error) {
+      console.error('Error during bulk delete:', error);
     }
   };
 
   const handleBulkAddSubmit = async () => {
     try {
       const lines = bulkAddText.split('\n').filter(line => line.trim());
+      const results: string[] = [];
+      const errors: string[] = [];
       
+      // Collecter tous les rôles et départements uniques
+      const uniqueRoles = new Set<string>();
+      const uniqueDepts = new Set<string>();
+      
+      lines.forEach(line => {
+        const [_, roleName, deptName] = line.split(',').map(s => s.trim());
+        if (roleName && deptName) {
+          uniqueRoles.add(roleName);
+          uniqueDepts.add(deptName);
+        }
+      });
+
+      // Créer les rôles manquants
+      for (const roleName of uniqueRoles) {
+        if (!roles.find(r => r.name === roleName)) {
+          const { data: roleData, error: roleError } = await supabase
+            .from('roles')
+            .insert({ name: roleName })
+            .select()
+            .single();
+
+          if (roleError) {
+            console.error('Erreur lors de la création du rôle:', roleError);
+            continue;
+          }
+          
+          if (roleData) {
+            roles.push(roleData);
+          }
+        }
+      }
+
+      // Créer les départements manquants
+      for (const deptName of uniqueDepts) {
+        if (!departments.find(d => d.name === deptName)) {
+          const { data: deptData, error: deptError } = await supabase
+            .from('departments')
+            .insert({ name: deptName })
+            .select()
+            .single();
+
+          if (deptError) {
+            console.error('Erreur lors de la création du département:', deptError);
+            continue;
+          }
+          
+          if (deptData) {
+            departments.push(deptData);
+          }
+        }
+      }
+
+      // Maintenant ajouter les membres
       for (const line of lines) {
         const [label, roleName, deptName] = line.split(',').map(s => s.trim());
         if (label && roleName && deptName) {
-          // Vérifier si le rôle existe
-          const role = roles.find(r => r.name === roleName);
-          // Vérifier si le département existe
-          const dept = departments.find(d => d.name === deptName);
-          
-          if (!role || !dept) {
-            throw new Error(`Le rôle "${roleName}" ou le département "${deptName}" n'existe pas.`);
+          try {
+            // Vérifier si le rôle existe maintenant
+            const role = roles.find(r => r.name === roleName);
+            // Vérifier si le département existe maintenant
+            const dept = departments.find(d => d.name === deptName);
+            
+            if (!role || !dept) {
+              errors.push(`Impossible de créer le rôle "${roleName}" ou le département "${deptName}" pour ${label}`);
+              continue;
+            }
+            
+            await onAddMember({
+              label,
+              role: role.name,
+              department: dept.name,
+            });
+            
+            results.push(`${label} ajouté avec succès`);
+          } catch (error) {
+            if (error instanceof Error) {
+              errors.push(error.message);
+            }
           }
-          
-          await onAddMember({
-            label,
-            role: role.name,
-            department: dept.name,
-          });
         }
       }
       
-      setShowBulkAddDialog(false);
-      setBulkAddText('');
+      // Afficher un résumé des opérations
+      if (results.length > 0) {
+        setNotification?.({
+          message: `${results.length} membre(s) ajouté(s) avec succès${errors.length > 0 ? '. ' + errors.join('. ') : ''}`,
+          type: errors.length > 0 ? 'error' : 'success'
+        });
+      } else if (errors.length > 0) {
+        setNotification?.({
+          message: errors.join('. '),
+          type: 'error'
+        });
+      }
+      
+      if (results.length > 0) {
+        setShowBulkAddDialog(false);
+        setBulkAddText('');
+      }
     } catch (error) {
       console.error('Error during bulk add:', error);
       throw error;
@@ -206,9 +293,8 @@ export default function TeamManagement({
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce membre ?')) {
-      await onDeleteMember(id);
-    }
+    setMembersToDelete([id]);
+    setShowDeleteConfirmDialog(true);
   };
 
   return (
@@ -571,6 +657,94 @@ export default function TeamManagement({
             Importer
           </Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={showDeleteConfirmDialog}
+        onClose={() => setShowDeleteConfirmDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            border: '4px solid #000',
+            backgroundColor: '#000',
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          backgroundColor: '#000',
+          color: '#fff',
+          textTransform: 'uppercase',
+          fontWeight: 700,
+          fontSize: '1.5rem',
+          textAlign: 'center',
+          py: 2,
+          borderBottom: '2px solid #fff'
+        }}>
+          ⚠️ ATTENTION ⚠️
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2, p: 4, backgroundColor: '#000' }}>
+          <Typography variant="h6" sx={{ 
+            textAlign: 'center',
+            fontWeight: 700,
+            mb: 3,
+            textTransform: 'uppercase',
+            color: '#fff'
+          }}>
+            Êtes-vous sûr de vouloir supprimer {membersToDelete.length} membre{membersToDelete.length > 1 ? 's' : ''} ?
+          </Typography>
+          <Typography sx={{ 
+            textAlign: 'center',
+            color: '#999',
+            mb: 2,
+          }}>
+            Cette action est irréversible.
+          </Typography>
+          <Box sx={{ 
+            mt: 4,
+            display: 'flex',
+            gap: 2,
+            justifyContent: 'center'
+          }}>
+            <Button
+              onClick={() => setShowDeleteConfirmDialog(false)}
+              sx={{
+                backgroundColor: '#000',
+                color: '#fff',
+                border: '2px solid #fff',
+                px: 4,
+                py: 1,
+                fontWeight: 'bold',
+                '&:hover': {
+                  backgroundColor: '#fff',
+                  color: '#000',
+                  border: '2px solid #fff',
+                },
+              }}
+            >
+              ANNULER
+            </Button>
+            <Button
+              onClick={handleConfirmDelete}
+              sx={{
+                backgroundColor: '#fff',
+                color: '#000',
+                border: '2px solid #fff',
+                px: 4,
+                py: 1,
+                fontWeight: 'bold',
+                '&:hover': {
+                  backgroundColor: '#000',
+                  color: '#fff',
+                  border: '2px solid #fff',
+                },
+              }}
+            >
+              SUPPRIMER
+            </Button>
+          </Box>
+        </DialogContent>
       </Dialog>
     </Box>
   );

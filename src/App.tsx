@@ -221,7 +221,11 @@ function App() {
       // Check if a member with the same label already exists
       const { data: existingMembers, error: checkError } = await supabase
         .from('team_members')
-        .select('label')
+        .select(`
+          *,
+          roles (name),
+          departments (name)
+        `)
         .eq('label', memberData.label);
 
       if (checkError) {
@@ -230,7 +234,19 @@ function App() {
       }
 
       if (existingMembers && existingMembers.length > 0) {
-        throw new Error('Un membre avec ce nom existe déjà');
+        // Vérifier si un membre avec le même nom existe déjà dans le même rôle ou département
+        const existingMember = existingMembers.find(
+          (existing) => 
+            existing.roles.name === member.role && 
+            existing.departments.name === member.department
+        );
+
+        if (existingMember) {
+          throw new Error(`${existingMember.label} existe déjà en tant que ${existingMember.roles.name} dans le département ${existingMember.departments.name}`);
+        }
+
+        // Si le membre existe avec un rôle ou département différent, ajouter une distinction
+        memberData.label = `${memberData.label} (${member.role}, ${member.department})`;
       }
 
       // Insert new member
@@ -692,6 +708,7 @@ function App() {
                     onAddMember={handleAddMember}
                     onUpdateMember={handleUpdateMember}
                     onDeleteMember={handleDeleteMember}
+                    setNotification={setNotification}
                   />
                 </Box>
               </Box>
