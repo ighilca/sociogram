@@ -361,6 +361,17 @@ function App() {
 
   const handleEvaluationSubmit = async (evaluation: { evaluator: string; evaluated: string; score: number }) => {
     try {
+      // Vérifier si une évaluation existe déjà
+      const { data: existingEvals, error: checkError } = await supabase
+        .from('collaborations')
+        .select('*')
+        .eq('source', evaluation.evaluator)
+        .eq('target', evaluation.evaluated);
+
+      if (checkError) throw checkError;
+
+      const existingEval = existingEvals?.[0];
+
       const collaboration = {
         source: evaluation.evaluator,
         target: evaluation.evaluated,
@@ -369,25 +380,42 @@ function App() {
         timestamp: new Date().toISOString()
       };
 
-      const { error } = await supabase
-        .from('collaborations')
-        .insert(collaboration);
+      let result;
+      if (existingEval) {
+        // Mettre à jour l'évaluation existante
+        result = await supabase
+          .from('collaborations')
+          .update(collaboration)
+          .eq('source', evaluation.evaluator)
+          .eq('target', evaluation.evaluated);
+      } else {
+        // Créer une nouvelle évaluation
+        result = await supabase
+          .from('collaborations')
+          .insert(collaboration);
+      }
 
-      if (error) throw error;
+      if (result.error) throw result.error;
 
       // Update local state
       setGraphData(prev => ({
         ...prev,
-        edges: [...prev.edges, collaboration],
+        edges: existingEval
+          ? prev.edges.map(edge => 
+              edge.source === evaluation.evaluator && edge.target === evaluation.evaluated
+                ? collaboration
+                : edge
+            )
+          : [...prev.edges, collaboration],
       }));
 
       setNotification({ message: 'Évaluation ajoutée avec succès', type: 'success' });
-      return true; // Indique que l'évaluation a réussi
+      return true;
     } catch (err) {
       console.error('Error in handleEvaluationSubmit:', err);
       const errorMessage = err instanceof Error ? err.message : "Erreur lors de l'ajout de l'évaluation";
       setNotification({ message: errorMessage, type: 'error' });
-      throw err; // Propage l'erreur pour que le composant puisse la gérer
+      throw err;
     }
   };
 
@@ -548,6 +576,7 @@ function App() {
                   onChangeEvaluator={handleChangeEvaluator}
                   embedded={true}
                   setCurrentTab={setCurrentTab}
+                  setNotification={setNotification}
                 />
               </Box>
             </Box>

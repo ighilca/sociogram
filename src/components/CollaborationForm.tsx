@@ -12,6 +12,7 @@ export interface CollaborationFormProps {
   onChangeEvaluator: (id: string) => void;
   embedded?: boolean;
   setCurrentTab: (tab: number) => void;
+  setNotification: (notification: { message: string; type: 'success' | 'error' }) => void;
 }
 
 export default function CollaborationForm({ 
@@ -22,23 +23,42 @@ export default function CollaborationForm({
   currentUser,
   onChangeEvaluator,
   embedded = false,
-  setCurrentTab
+  setCurrentTab,
+  setNotification
 }: CollaborationFormProps) {
   const [scores, setScores] = useState<Record<string, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Calculer le nombre de membres à évaluer (tous sauf l'évaluateur actuel)
+  const membersToEvaluate = members.filter(member => member.id !== currentUser);
+  const allMembersEvaluated = membersToEvaluate.length === Object.keys(scores).length;
+
   const handleSubmit = (memberId: string, score: number) => {
     if (!currentUser) return;
     
-    setScores(prev => ({
-      ...prev,
-      [memberId]: score
-    }));
+    // Si le score est le même que celui déjà sélectionné, on le retire
+    if (scores[memberId] === score) {
+      const newScores = { ...scores };
+      delete newScores[memberId];
+      setScores(newScores);
+    } else {
+      // Sinon on met à jour le score
+      setScores(prev => ({
+        ...prev,
+        [memberId]: score
+      }));
+    }
   };
 
   const handleBulkSubmit = async () => {
-    const allScores = Object.entries(scores);
-    if (allScores.length === 0) return;
+    // Vérifier que tous les membres ont été évalués
+    if (!allMembersEvaluated) {
+      setNotification?.({ 
+        message: 'Vous devez évaluer tous les membres de l\'équipe', 
+        type: 'error' 
+      });
+      return;
+    }
     
     setIsSubmitting(true);
     let success = true;
@@ -46,7 +66,7 @@ export default function CollaborationForm({
     try {
       // Attendre que toutes les évaluations soient envoyées
       const results = await Promise.all(
-        allScores.map(([memberId, score]) => 
+        Object.entries(scores).map(([memberId, score]) => 
           onSubmit({
             evaluator: currentUser!,
             evaluated: memberId,
@@ -184,7 +204,7 @@ export default function CollaborationForm({
           variant="contained"
           fullWidth
           onClick={handleBulkSubmit}
-          disabled={isSubmitting || Object.keys(scores).length === 0}
+          disabled={isSubmitting || !allMembersEvaluated}
           sx={{
             borderRadius: 0,
             backgroundColor: '#ccc',
@@ -201,7 +221,12 @@ export default function CollaborationForm({
             },
           }}
         >
-          {isSubmitting ? 'ENVOI EN COURS...' : 'ENREGISTRER TOUTES LES ÉVALUATIONS'}
+          {isSubmitting 
+            ? 'ENVOI EN COURS...' 
+            : allMembersEvaluated 
+              ? 'ENREGISTRER TOUTES LES ÉVALUATIONS'
+              : `ÉVALUER TOUS LES MEMBRES (${Object.keys(scores).length}/${membersToEvaluate.length})`
+          }
         </Button>
       </Box>
     </Box>
