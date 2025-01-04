@@ -5,6 +5,7 @@ import { EdgeCurvedArrowProgram } from "@sigma/edge-curve";
 import { TeamMember, CollaborationEdge } from '../types/graph';
 import { COLLABORATION_COLORS } from '../types/graph';
 import { Box, Typography } from '@mui/material';
+import saveAsPNG from '../utils/saveAsPNG';
 
 interface GraphViewerProps {
   data: {
@@ -88,6 +89,11 @@ export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter }: 
   const graphRef = useRef<Graph | null>(null);
   const draggedNodeRef = useRef<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  const handleDownload = async () => {
+    if (!sigmaRef.current) return;
+    await saveAsPNG(sigmaRef.current);
+  };
 
   // Initialize graph only once
   useEffect(() => {
@@ -296,11 +302,12 @@ export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter }: 
       gap: 2, 
       height: '100%',
       width: '100%',
+      position: 'relative',
     }}>
       <div 
         ref={containerRef} 
         className="sigma-container"
-        style={{ 
+        style={{
           height: '100%',
           width: '100%',
           cursor: isDragging ? 'grabbing' : 'grab',
@@ -310,9 +317,30 @@ export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter }: 
             linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)
           `,
           backgroundSize: '20px 20px'
-        }} 
+        }}
       />
       <GraphLegend />
+      <Box 
+        onClick={handleDownload}
+        sx={{
+          position: 'absolute',
+          bottom: 16,
+          right: 16,
+          backgroundColor: '#000',
+          color: '#fff',
+          padding: '8px 16px',
+          cursor: 'pointer',
+          fontFamily: 'monospace',
+          fontWeight: 'bold',
+          border: '2px solid #000',
+          '&:hover': {
+            backgroundColor: '#fff',
+            color: '#000',
+          }
+        }}
+      >
+        TÉLÉCHARGER LE GRAPHE
+      </Box>
     </Box>
   );
 } 
