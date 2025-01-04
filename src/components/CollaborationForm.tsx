@@ -6,7 +6,7 @@ import { SelectChangeEvent } from '@mui/material/Select';
 export interface CollaborationFormProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (evaluation: { evaluator: string; evaluated: string; score: number }) => Promise<void>;
+  onSubmit: (evaluation: { evaluator: string; evaluated: string; score: number }) => Promise<boolean>;
   members: TeamMember[];
   currentUser: string | null;
   onChangeEvaluator: (id: string) => void;
@@ -41,28 +41,38 @@ export default function CollaborationForm({
     if (allScores.length === 0) return;
     
     setIsSubmitting(true);
+    let success = true;
+    
     try {
       // Attendre que toutes les évaluations soient envoyées
-      await Promise.all(
+      const results = await Promise.all(
         allScores.map(([memberId, score]) => 
           onSubmit({
             evaluator: currentUser!,
             evaluated: memberId,
             score
-          })
+          }).catch(() => false)
         )
       );
+
+      // Vérifier si toutes les évaluations ont réussi
+      success = results.every(result => result === true);
 
       // Réinitialiser le formulaire
       setScores({});
       
-      // Changer d'onglet seulement après que toutes les évaluations sont envoyées
-      setCurrentTab(1);
+      // Changer d'onglet seulement si toutes les évaluations ont réussi
+      if (success) {
+        setCurrentTab(1);
+      }
     } catch (error) {
       console.error('Erreur lors de l\'envoi des évaluations:', error);
+      success = false;
     } finally {
       setIsSubmitting(false);
     }
+
+    return success;
   };
 
   const handleClose = () => {

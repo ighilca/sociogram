@@ -382,10 +382,12 @@ function App() {
       }));
 
       setNotification({ message: 'Évaluation ajoutée avec succès', type: 'success' });
+      return true; // Indique que l'évaluation a réussi
     } catch (err) {
       console.error('Error in handleEvaluationSubmit:', err);
       const errorMessage = err instanceof Error ? err.message : "Erreur lors de l'ajout de l'évaluation";
       setNotification({ message: errorMessage, type: 'error' });
+      throw err; // Propage l'erreur pour que le composant puisse la gérer
     }
   };
 
