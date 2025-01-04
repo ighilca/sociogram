@@ -13,8 +13,9 @@ interface GraphViewerProps {
     edges: CollaborationEdge[];
   };
   nodeSize: number;
-  onEvaluate: (memberId: string) => void;
+  onEvaluate: (nodeId: string) => void;
   nameFilter: string;
+  departmentFilter: string;
 }
 
 const calculateAverageScore = (nodeId: string, edges: CollaborationEdge[]): number => {
@@ -83,7 +84,7 @@ const GraphLegend = () => (
   </Box>
 );
 
-export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter }: GraphViewerProps) {
+export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter, departmentFilter }: GraphViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sigmaRef = useRef<Sigma | null>(null);
   const graphRef = useRef<Graph | null>(null);
@@ -185,115 +186,99 @@ export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter }: 
 
   // Update graph data when props change
   useEffect(() => {
-    if (!graphRef.current) return;
+    if (!graphRef.current || !sigmaRef.current) return;
 
     const graph = graphRef.current;
 
     // Clear all existing nodes and edges
     graph.clear();
 
-    if (!nameFilter) {
-      // If no filter, show all nodes and edges
-      data.nodes.forEach((node) => {
-        graph.addNode(node.id, {
-          ...node,
-          x: Math.random() * 10 - 5,
-          y: Math.random() * 10 - 5,
-          size: calculateNodeSize(node.id, data.edges, nodeSize),
-          color: calculateNodeColor(node.id, data.edges),
-          label: node.label || '',
-        });
-      });
+    // Filtrer les nœuds en fonction des critères
+    let filteredNodes = data.nodes;
+    let filteredEdges = data.edges;
 
-      data.edges.forEach((edge) => {
-        try {
-          graph.addEdge(edge.source, edge.target, {
-            size: 3,
-            label: edge.score.toString(),
-            color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
-            type: 'curvedArrow',
-            forceLabel: true,
-            labelSize: 12,
-            labelColor: '#000000',
-            curvature: 0.3,
-          });
-        } catch (err) {
-          console.warn(`Impossible d'ajouter l'arête ${edge.source}->${edge.target}:`, err);
-        }
-      });
-    } else {
-      // Find nodes that match the filter
-      const filteredNodes = data.nodes.filter(node => 
-        node.label?.toLowerCase().includes(nameFilter.toLowerCase())
+    // Si un filtre par nom est actif
+    if (nameFilter) {
+      // Trouver d'abord les nœuds qui correspondent au nom
+      const directlyFilteredNodes = data.nodes.filter(node =>
+        node.label.toLowerCase().includes(nameFilter.toLowerCase())
       );
 
-      // Keep track of added nodes to avoid duplicates
-      const addedNodes = new Set<string>();
-
-      // For each filtered node, add it and its direct connections
-      filteredNodes.forEach(filteredNode => {
-        // Add the filtered node if not already added
-        if (!addedNodes.has(filteredNode.id)) {
-          graph.addNode(filteredNode.id, {
-            ...filteredNode,
-            x: 0, // Place filtered node at center
-            y: 0,
-            size: calculateNodeSize(filteredNode.id, data.edges, nodeSize),
-            color: calculateNodeColor(filteredNode.id, data.edges),
-            label: filteredNode.label || '',
-          });
-          addedNodes.add(filteredNode.id);
-        }
-
-        // Find all edges connected to this node
-        const connectedEdges = data.edges.filter(edge => 
-          edge.source === filteredNode.id || edge.target === filteredNode.id
-        );
-
-        // Add connected nodes and edges
-        connectedEdges.forEach((edge, index) => {
-          const connectedNodeId = edge.source === filteredNode.id ? edge.target : edge.source;
-          const connectedNode = data.nodes.find(n => n.id === connectedNodeId);
-
-          if (connectedNode && !addedNodes.has(connectedNode.id)) {
-            // Add connected node in a circle around the filtered node
-            const angle = (2 * Math.PI * index) / connectedEdges.length;
-            graph.addNode(connectedNode.id, {
-              ...connectedNode,
-              x: Math.cos(angle) * 5, // Arrange in a circle
-              y: Math.sin(angle) * 5,
-              size: calculateNodeSize(connectedNode.id, data.edges, nodeSize),
-              color: calculateNodeColor(connectedNode.id, data.edges),
-              label: connectedNode.label || '',
-            });
-            addedNodes.add(connectedNode.id);
+      // Trouver toutes les connexions directes de ces nœuds
+      const connectedNodeIds = new Set<string>();
+      directlyFilteredNodes.forEach(node => {
+        // Ajouter le nœud filtré
+        connectedNodeIds.add(node.id);
+        
+        // Trouver toutes les connexions directes
+        data.edges.forEach(edge => {
+          if (edge.source === node.id) {
+            connectedNodeIds.add(edge.target);
           }
-
-          // Add the edge if both nodes exist
-          if (addedNodes.has(edge.source) && addedNodes.has(edge.target)) {
-            try {
-              graph.addEdge(edge.source, edge.target, {
-                size: 3,
-                label: edge.score.toString(),
-                color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
-                type: 'curvedArrow',
-                forceLabel: true,
-                labelSize: 12,
-                labelColor: '#000000',
-                curvature: 0.3,
-              });
-            } catch (err) {
-              console.warn(`Impossible d'ajouter l'arête ${edge.source}->${edge.target}:`, err);
-            }
+          if (edge.target === node.id) {
+            connectedNodeIds.add(edge.source);
           }
         });
       });
+
+      // Filtrer les nœuds et les arêtes
+      filteredNodes = data.nodes.filter(node => connectedNodeIds.has(node.id));
+      filteredEdges = data.edges.filter(edge =>
+        // Ne garder que les arêtes qui ont au moins une extrémité dans les nœuds filtrés directement
+        directlyFilteredNodes.some(n => n.id === edge.source || n.id === edge.target)
+      );
     }
 
-    // Force a refresh of the graph
-    sigmaRef.current?.refresh();
+    // Si un filtre par département est actif
+    if (departmentFilter) {
+      // Filtrer les nœuds par département
+      const departmentNodes = filteredNodes.filter(node =>
+        node.department === departmentFilter
+      );
+      
+      // Garder uniquement les arêtes entre les membres du même département
+      filteredEdges = filteredEdges.filter(edge =>
+        departmentNodes.some(n => n.id === edge.source) &&
+        departmentNodes.some(n => n.id === edge.target)
+      );
+      
+      filteredNodes = departmentNodes;
+    }
 
-  }, [data, nodeSize, nameFilter]);
+    // Ajouter les nœuds filtrés
+    filteredNodes.forEach((node) => {
+      graph.addNode(node.id, {
+        ...node,
+        x: Math.random() * 10 - 5,
+        y: Math.random() * 10 - 5,
+        size: calculateNodeSize(node.id, data.edges, nodeSize),
+        color: calculateNodeColor(node.id, data.edges),
+        label: node.label || '',
+      });
+    });
+
+    // Ajouter les arêtes filtrées
+    filteredEdges.forEach((edge) => {
+      try {
+        graph.addEdge(edge.source, edge.target, {
+          size: 3,
+          label: edge.score.toString(),
+          color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
+          type: 'curvedArrow',
+          forceLabel: true,
+          labelSize: 12,
+          labelColor: '#000000',
+          curvature: 0.3,
+        });
+      } catch (err) {
+        console.warn(`Impossible d'ajouter l'arête ${edge.source}->${edge.target}:`, err);
+      }
+    });
+
+    // Force a refresh of the graph
+    sigmaRef.current.refresh();
+
+  }, [data, nodeSize, nameFilter, departmentFilter]);
 
   return (
     <Box sx={{ 

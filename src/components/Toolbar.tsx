@@ -1,4 +1,4 @@
-import { Box, IconButton, Slider, Typography, TextField } from '@mui/material';
+import { Box, IconButton, Slider, Typography, TextField, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
@@ -11,6 +11,9 @@ interface ToolbarProps {
   onNodeSizeChange: (size: number) => void;
   nameFilter: string;
   onNameFilterChange: (filter: string) => void;
+  departments: string[];
+  departmentFilter: string;
+  onDepartmentFilterChange: (department: string) => void;
 }
 
 export default function Toolbar({
@@ -21,6 +24,9 @@ export default function Toolbar({
   onNodeSizeChange,
   nameFilter,
   onNameFilterChange,
+  departments,
+  departmentFilter,
+  onDepartmentFilterChange,
 }: ToolbarProps) {
   return (
     <Box sx={{ 
@@ -145,6 +151,34 @@ export default function Toolbar({
             },
           }}
         />
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Département</InputLabel>
+          <Select
+            value={departmentFilter}
+            label="Département"
+            onChange={(e) => onDepartmentFilterChange(e.target.value)}
+            sx={{
+              borderRadius: 0,
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'black',
+                borderWidth: 2,
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'black',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'black',
+              },
+            }}
+          >
+            <MenuItem value="">Tous</MenuItem>
+            {departments.map((department) => (
+              <MenuItem key={department} value={department}>
+                {department}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Box>
     </Box>
   );

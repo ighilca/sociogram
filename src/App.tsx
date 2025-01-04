@@ -102,6 +102,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [nodeSize, setNodeSize] = useState(10);
   const [nameFilter, setNameFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [currentTab, setCurrentTab] = useState(0);
   const [isAdmin] = useState(true);
@@ -637,6 +638,9 @@ function App() {
                   onNodeSizeChange={setNodeSize}
                   nameFilter={nameFilter}
                   onNameFilterChange={(value: string) => setNameFilter(value)}
+                  departments={Array.from(new Set(graphData.nodes.map(node => node.department)))}
+                  departmentFilter={departmentFilter}
+                  onDepartmentFilterChange={(value: string) => setDepartmentFilter(value)}
                 />
               </Box>
 
@@ -657,6 +661,7 @@ function App() {
                     nodeSize={nodeSize}
                     onEvaluate={handleEvaluateClick}
                     nameFilter={nameFilter}
+                    departmentFilter={departmentFilter}
                   />
                 </Box>
               )}
