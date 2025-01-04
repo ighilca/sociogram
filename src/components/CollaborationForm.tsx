@@ -6,7 +6,7 @@ import { SelectChangeEvent } from '@mui/material/Select';
 export interface CollaborationFormProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (evaluation: { evaluator: string; evaluated: string; score: number }) => void;
+  onSubmit: (evaluation: { evaluator: string; evaluated: string; score: number }) => Promise<void>;
   members: TeamMember[];
   currentUser: string | null;
   onChangeEvaluator: (id: string) => void;

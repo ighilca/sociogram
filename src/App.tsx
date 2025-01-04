@@ -540,7 +540,10 @@ function App() {
                 <CollaborationForm
                   open={true}
                   onClose={() => setCurrentTab(1)}
-                  onSubmit={handleEvaluationSubmit}
+                  onSubmit={async (evaluation) => {
+                    await handleEvaluationSubmit(evaluation);
+                    setCurrentTab(1);
+                  }}
                   members={graphData.nodes}
                   currentUser={currentUser}
                   onChangeEvaluator={handleChangeEvaluator}
