@@ -8,6 +8,7 @@ import TeamManagement from './components/TeamManagement'
 import { supabase } from './lib/supabase'
 import { TeamMember, CollaborationEdge } from './types/graph'
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import Footer from './components/Footer';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -483,8 +484,8 @@ function App() {
           width: '100vw',
           maxWidth: '100vw !important',
           display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'flex-start',
+          flexDirection: 'column',
+          alignItems: 'center',
           pt: 4,
           pb: 4,
           px: 1,
@@ -499,6 +500,7 @@ function App() {
           minWidth: 'auto',
           maxWidth: '95%',
           overflow: 'auto',
+          mb: 4,
         }}>
           <Box sx={{ 
             display: 'flex', 
@@ -741,6 +743,7 @@ function App() {
             </Alert>
           </Snackbar>
         </Box>
+        <Footer />
       </Container>
     </ThemeProvider>
   );
