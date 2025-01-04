@@ -19,8 +19,7 @@ import {
   InputLabel,
   SelectChangeEvent,
   ListItemIcon,
-  Checkbox,
-  Alert
+  Checkbox
 } from '@mui/material';
 import { TeamMember } from '../types/graph';
 import { supabase } from '../lib/supabase';

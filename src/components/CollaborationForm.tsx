@@ -1,4 +1,4 @@
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, FormControl, Box, Typography, List, ListItem, ListItemText } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, Button, Select, MenuItem, FormControl, Box, Typography, List, ListItem } from '@mui/material';
 import { TeamMember } from '../types/graph';
 import { useState } from 'react';
 import { SelectChangeEvent } from '@mui/material/Select';
@@ -6,12 +6,10 @@ import { SelectChangeEvent } from '@mui/material/Select';
 export interface CollaborationFormProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: { from: string; to: string; score: number }) => void;
+  onSubmit: (evaluation: { evaluator: string; evaluated: string; score: number }) => void;
   members: TeamMember[];
   currentUser: string | null;
-  onChangeEvaluator: (newEvaluatorId: string) => void;
-  selectedMember: string | null;
-  onSelectMember: (memberId: string | null) => void;
+  onChangeEvaluator: (id: string) => void;
   embedded?: boolean;
 }
 
@@ -22,8 +20,6 @@ export default function CollaborationForm({
   members, 
   currentUser,
   onChangeEvaluator,
-  selectedMember,
-  onSelectMember,
   embedded = false
 }: CollaborationFormProps) {
   const [scores, setScores] = useState<Record<string, number>>({});
@@ -32,8 +28,8 @@ export default function CollaborationForm({
     if (!currentUser) return;
     
     onSubmit({
-      from: currentUser,
-      to: memberId,
+      evaluator: currentUser,
+      evaluated: memberId,
       score
     });
     

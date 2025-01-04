@@ -49,6 +49,11 @@ const GraphLegend = () => (
     fontSize: '0.75rem',
     whiteSpace: 'nowrap',
     overflowX: 'auto',
+    '&::-webkit-scrollbar': {
+      display: 'none'
+    },
+    msOverflowStyle: 'none',  /* IE and Edge */
+    scrollbarWidth: 'none',  /* Firefox */
   }}>
     {Object.entries(COLLABORATION_COLORS).map(([score, color]) => (
       <Box key={score} sx={{ 
@@ -299,9 +304,12 @@ export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter }: 
           height: '100%',
           width: '100%',
           cursor: isDragging ? 'grabbing' : 'grab',
-          border: '2px solid black',
-          borderRadius: '4px',
-          backgroundColor: '#fff'
+          backgroundColor: '#fff',
+          backgroundImage: `
+            linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)
+          `,
+          backgroundSize: '20px 20px'
         }} 
       />
       <GraphLegend />

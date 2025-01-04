@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Container, Typography, Box, CircularProgress, Button, Alert, Snackbar, Tab, Tabs } from '@mui/material'
+import { Container, Typography, Box, CircularProgress, Alert, Snackbar, Tab, Tabs } from '@mui/material'
 import GraphViewer from './components/Graph'
 import Toolbar from './components/Toolbar'
 import CollaborationForm from './components/CollaborationForm'
@@ -7,7 +7,6 @@ import AnalysisPanel from './components/AnalysisPanel'
 import TeamManagement from './components/TeamManagement'
 import { supabase } from './lib/supabase'
 import { TeamMember, CollaborationEdge } from './types/graph'
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
 interface TabPanelProps {
@@ -103,11 +102,9 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [nodeSize, setNodeSize] = useState(10);
   const [nameFilter, setNameFilter] = useState('');
-  const [showEvaluationForm, setShowEvaluationForm] = useState(false);
-  const [selectedMemberForEvaluation, setSelectedMemberForEvaluation] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [currentTab, setCurrentTab] = useState(0);
-  const [isAdmin] = useState(true); // In a real app, this would come from authentication
+  const [isAdmin] = useState(true);
   
   const [graphData, setGraphData] = useState<{
     nodes: TeamMember[];
@@ -362,71 +359,39 @@ function App() {
     }
   };
 
-  const handleEvaluationSubmit = async (data: { from: string; to: string; score: number }) => {
+  const handleEvaluationSubmit = async (evaluation: { evaluator: string; evaluated: string; score: number }) => {
     try {
-      setLoading(true);
-      
-      if (!data.from || !data.to || typeof data.score !== 'number') {
-        throw new Error('Données d\'évaluation invalides');
-      }
-
       const collaboration = {
-        source: data.from,
-        target: data.to,
-        score: data.score,
-        direction: 'outgoing',
+        source: evaluation.evaluator,
+        target: evaluation.evaluated,
+        score: evaluation.score,
+        direction: 'outgoing' as const,
         timestamp: new Date().toISOString()
       };
 
-      // Delete any existing collaboration first
-      await supabase
+      const { error } = await supabase
         .from('collaborations')
-        .delete()
-        .match({ source: data.from, target: data.to });
+        .insert(collaboration);
 
-      // Insert new collaboration
-      const { data: insertedEdge, error: insertError } = await supabase
-        .from('collaborations')
-        .insert([collaboration])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Insert error:', insertError);
-        throw new Error('Erreur lors de l\'enregistrement de l\'évaluation');
-      }
-
-      if (!insertedEdge) {
-        throw new Error('Aucune donnée retournée après l\'insertion');
-      }
+      if (error) throw error;
 
       // Update local state
       setGraphData(prev => ({
         ...prev,
-        edges: [
-          ...prev.edges.filter(edge => !(edge.source === data.from && edge.target === data.to)),
-          insertedEdge
-        ],
+        edges: [...prev.edges, collaboration],
       }));
 
-      setNotification({ 
-        message: 'Évaluation enregistrée avec succès', 
-        type: 'success' 
-      });
-      
-      setShowEvaluationForm(false);
+      setNotification({ message: 'Évaluation ajoutée avec succès', type: 'success' });
+      setCurrentTab(1); // Switch to Visualization tab
     } catch (err) {
-      console.error('Error submitting evaluation:', err);
-      const errorMessage = err instanceof Error ? err.message : "Échec de l'enregistrement de l'évaluation";
+      console.error('Error in handleEvaluationSubmit:', err);
+      const errorMessage = err instanceof Error ? err.message : "Erreur lors de l'ajout de l'évaluation";
       setNotification({ message: errorMessage, type: 'error' });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleEvaluateClick = (memberId: string) => {
-    setSelectedMemberForEvaluation(memberId);
-    setShowEvaluationForm(true);
+  const handleEvaluateClick = (_memberId: string) => {
+    setCurrentTab(0);
   };
 
   const handleCloseNotification = () => {
@@ -575,17 +540,11 @@ function App() {
               }}>
                 <CollaborationForm
                   open={true}
-                  onClose={() => {
-                    setShowEvaluationForm(false);
-                    setSelectedMemberForEvaluation(null);
-                    setCurrentTab(1); // Switch to Visualization tab after closing
-                  }}
+                  onClose={() => setCurrentTab(1)}
                   onSubmit={handleEvaluationSubmit}
                   members={graphData.nodes}
                   currentUser={currentUser}
                   onChangeEvaluator={handleChangeEvaluator}
-                  selectedMember={selectedMemberForEvaluation}
-                  onSelectMember={setSelectedMemberForEvaluation}
                   embedded={true}
                 />
               </Box>
