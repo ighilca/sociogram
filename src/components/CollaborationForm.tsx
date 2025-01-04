@@ -33,19 +33,27 @@ export default function CollaborationForm({
     }));
   };
 
-  const handleBulkSubmit = () => {
+  const handleBulkSubmit = async () => {
     const allScores = Object.entries(scores);
     if (allScores.length === 0) return;
     
-    allScores.forEach(([memberId, score]) => {
-      onSubmit({
-        evaluator: currentUser!,
-        evaluated: memberId,
-        score
-      });
-    });
+    try {
+      // Attendre que toutes les évaluations soient envoyées
+      await Promise.all(
+        allScores.map(([memberId, score]) => 
+          onSubmit({
+            evaluator: currentUser!,
+            evaluated: memberId,
+            score
+          })
+        )
+      );
 
-    handleClose();
+      // Fermer seulement après que toutes les évaluations sont envoyées avec succès
+      handleClose();
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi des évaluations:', error);
+    }
   };
 
   const handleClose = () => {
