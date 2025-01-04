@@ -391,7 +391,7 @@ function App() {
   };
 
   const handleEvaluateClick = (_memberId: string) => {
-    setCurrentTab(0);
+    // Ne rien faire pour l'instant
   };
 
   const handleCloseNotification = () => {
