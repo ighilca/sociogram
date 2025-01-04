@@ -46,6 +46,8 @@ export default function CollaborationForm({
     allScores.forEach(([memberId, score]) => {
       handleSubmit(memberId, score);
     });
+
+    handleClose();
   };
 
   const handleClose = () => {

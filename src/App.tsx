@@ -382,7 +382,6 @@ function App() {
       }));
 
       setNotification({ message: 'Évaluation ajoutée avec succès', type: 'success' });
-      setCurrentTab(1); // Switch to Visualization tab
     } catch (err) {
       console.error('Error in handleEvaluationSubmit:', err);
       const errorMessage = err instanceof Error ? err.message : "Erreur lors de l'ajout de l'évaluation";
