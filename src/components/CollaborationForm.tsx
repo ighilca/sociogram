@@ -27,12 +27,6 @@ export default function CollaborationForm({
   const handleSubmit = (memberId: string, score: number) => {
     if (!currentUser) return;
     
-    onSubmit({
-      evaluator: currentUser,
-      evaluated: memberId,
-      score
-    });
-    
     setScores(prev => ({
       ...prev,
       [memberId]: score
@@ -44,7 +38,11 @@ export default function CollaborationForm({
     if (allScores.length === 0) return;
     
     allScores.forEach(([memberId, score]) => {
-      handleSubmit(memberId, score);
+      onSubmit({
+        evaluator: currentUser!,
+        evaluated: memberId,
+        score
+      });
     });
 
     handleClose();
