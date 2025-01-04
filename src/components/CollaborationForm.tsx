@@ -11,6 +11,7 @@ export interface CollaborationFormProps {
   currentUser: string | null;
   onChangeEvaluator: (id: string) => void;
   embedded?: boolean;
+  setCurrentTab: (tab: number) => void;
 }
 
 export default function CollaborationForm({ 
@@ -20,9 +21,11 @@ export default function CollaborationForm({
   members, 
   currentUser,
   onChangeEvaluator,
-  embedded = false
+  embedded = false,
+  setCurrentTab
 }: CollaborationFormProps) {
   const [scores, setScores] = useState<Record<string, number>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (memberId: string, score: number) => {
     if (!currentUser) return;
@@ -37,6 +40,7 @@ export default function CollaborationForm({
     const allScores = Object.entries(scores);
     if (allScores.length === 0) return;
     
+    setIsSubmitting(true);
     try {
       // Attendre que toutes les évaluations soient envoyées
       await Promise.all(
@@ -49,10 +53,15 @@ export default function CollaborationForm({
         )
       );
 
-      // Fermer seulement après que toutes les évaluations sont envoyées avec succès
-      handleClose();
+      // Réinitialiser le formulaire
+      setScores({});
+      
+      // Changer d'onglet seulement après que toutes les évaluations sont envoyées
+      setCurrentTab(1);
     } catch (error) {
       console.error('Erreur lors de l\'envoi des évaluations:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -165,6 +174,7 @@ export default function CollaborationForm({
           variant="contained"
           fullWidth
           onClick={handleBulkSubmit}
+          disabled={isSubmitting || Object.keys(scores).length === 0}
           sx={{
             borderRadius: 0,
             backgroundColor: '#ccc',
@@ -174,9 +184,14 @@ export default function CollaborationForm({
               backgroundColor: '#999',
               border: '1px solid #999',
             },
+            '&.Mui-disabled': {
+              backgroundColor: '#f5f5f5',
+              color: '#ccc',
+              border: '1px solid #ccc',
+            },
           }}
         >
-          ENREGISTRER TOUTES LES ÉVALUATIONS
+          {isSubmitting ? 'ENVOI EN COURS...' : 'ENREGISTRER TOUTES LES ÉVALUATIONS'}
         </Button>
       </Box>
     </Box>
