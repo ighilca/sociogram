@@ -37,12 +37,16 @@ const calculateNodeColor = (nodeId: string, edges: CollaborationEdge[]): string 
 };
 
 const GraphLegend = () => {
-  const colorNames = {
-    '#DF7373': 'Rouge',
-    '#FA9500': 'Orange',
-    '#5FA8D3': 'Bleu',
-    '#415D43': 'Vert',
-    '#111D13': 'Noir',
+  const colorNames: Record<string, string> = {
+    [COLLABORATION_COLORS[0]]: 'Rouge',
+    [COLLABORATION_COLORS[1]]: 'Orange',
+    [COLLABORATION_COLORS[2]]: 'Bleu',
+    [COLLABORATION_COLORS[3]]: 'Vert',
+    [COLLABORATION_COLORS[4]]: 'Noir',
+  };
+
+  const getColorName = (color: string): string => {
+    return colorNames[color] || 'Unknown';
   };
 
   return (
@@ -108,7 +112,7 @@ const GraphLegend = () => {
             zIndex: 1000,
             mb: 1,
           }}>
-            {colorNames[color]}
+            {getColorName(color)}
           </Box>
         </Box>
       ))}
