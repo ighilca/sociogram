@@ -27,7 +27,7 @@ export default function Footer() {
       <Typography 
         variant="caption" 
         sx={{ 
-          fontFamily: 'monospace',
+          fontFamily: 'Roboto, sans-serif',
           opacity: 0.7,
         }}
       >

@@ -53,7 +53,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: 'monospace',
+    fontFamily: 'Roboto, sans-serif',
     h4: {
       fontWeight: 900,
       letterSpacing: '-1px',

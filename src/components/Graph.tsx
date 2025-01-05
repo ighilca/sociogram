@@ -36,53 +36,85 @@ const calculateNodeColor = (nodeId: string, edges: CollaborationEdge[]): string 
   return COLLABORATION_COLORS[roundedScore] || COLLABORATION_COLORS[0];
 };
 
-const GraphLegend = () => (
-  <Box sx={{ 
-    display: 'flex', 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    gap: 2, 
-    mt: 1,
-    py: 1,
-    px: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    fontSize: '0.75rem',
-    whiteSpace: 'nowrap',
-    overflowX: 'auto',
-    '&::-webkit-scrollbar': {
-      display: 'none'
-    },
-    msOverflowStyle: 'none',  /* IE and Edge */
-    scrollbarWidth: 'none',  /* Firefox */
-  }}>
-    {Object.entries(COLLABORATION_COLORS).map(([score, color]) => (
-      <Box key={score} sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 0.5,
-        minWidth: 'fit-content',
-      }}>
-        <Box sx={{ 
-          width: 12, 
-          height: 12, 
-          borderRadius: '50%', 
-          backgroundColor: color,
-          border: '1px solid #000',
-          flexShrink: 0,
-        }} />
-        <Typography variant="caption" sx={{ fontWeight: 500 }}>
-          {score === '0' ? 'Aucune' : 
-           score === '1' ? 'Minimale' :
-           score === '2' ? 'Modérée' :
-           score === '3' ? 'Bonne' :
-           'Optimale'}
-        </Typography>
-      </Box>
-    ))}
-  </Box>
-);
+const GraphLegend = () => {
+  const colorNames = {
+    '#DF7373': 'Rouge',
+    '#FA9500': 'Orange',
+    '#5FA8D3': 'Bleu',
+    '#415D43': 'Vert',
+    '#111D13': 'Noir',
+  };
+
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center',
+      gap: 2, 
+      mt: 1,
+      py: 1,
+      px: 2,
+      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+      border: '1px solid #ccc',
+      borderRadius: '4px',
+      fontSize: '0.75rem',
+      whiteSpace: 'nowrap',
+      overflowX: 'auto',
+      '&::-webkit-scrollbar': {
+        display: 'none'
+      },
+      msOverflowStyle: 'none',  /* IE and Edge */
+      scrollbarWidth: 'none',  /* Firefox */
+    }}>
+      {Object.entries(COLLABORATION_COLORS).map(([score, color]) => (
+        <Box key={score} sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 0.5,
+          minWidth: 'fit-content',
+          position: 'relative',
+          '&:hover .color-name': {
+            display: 'block',
+          }
+        }}>
+          <Box sx={{ 
+            width: 12, 
+            height: 12, 
+            borderRadius: '50%', 
+            backgroundColor: color,
+            border: '1px solid #000',
+            flexShrink: 0,
+            cursor: 'help',
+          }} />
+          <Typography variant="caption" sx={{ fontWeight: 500 }}>
+            {score === '0' ? 'Aucune' : 
+             score === '1' ? 'Minimale' :
+             score === '2' ? 'Modérée' :
+             score === '3' ? 'Bonne' :
+             'Optimale'}
+          </Typography>
+          <Box className="color-name" sx={{
+            display: 'none',
+            position: 'absolute',
+            bottom: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            color: '#fff',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontSize: '0.75rem',
+            whiteSpace: 'nowrap',
+            zIndex: 1000,
+            mb: 1,
+          }}>
+            {colorNames[color]}
+          </Box>
+        </Box>
+      ))}
+    </Box>
+  );
+};
 
 export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter, departmentFilter }: GraphViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
