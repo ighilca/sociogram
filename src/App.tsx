@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Container, Typography, Box, CircularProgress, Alert, Snackbar, Tab, Tabs } from '@mui/material'
+import { Container, Typography, Box, CircularProgress, Alert, Snackbar, Tab, Tabs, IconButton, Drawer, List, ListItem, ListItemText, ListItemButton } from '@mui/material'
 import GraphViewer from './components/Graph'
 import Toolbar from './components/Toolbar'
 import CollaborationForm from './components/CollaborationForm'
@@ -9,6 +9,7 @@ import { supabase } from './lib/supabase'
 import { TeamMember, CollaborationEdge } from './types/graph'
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Footer from './components/Footer';
+import MenuIcon from '@mui/icons-material/Menu';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -25,7 +26,11 @@ function TabPanel(props: TabPanelProps) {
       {...other}
     >
       {value === index && (
-        <Box sx={{ py: 3 }}>
+        <Box sx={{ 
+          py: 3,
+          px: 0,
+          width: '100%',
+        }}>
           {children}
         </Box>
       )}
@@ -107,6 +112,7 @@ function App() {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [currentTab, setCurrentTab] = useState(0);
   const [isAdmin] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const [graphData, setGraphData] = useState<{
     nodes: TeamMember[];
@@ -474,33 +480,134 @@ function App() {
     }
   };
 
+  const handleMobileMenuClick = (newValue: number) => {
+    setCurrentTab(newValue);
+    setMobileMenuOpen(false);
+  };
+
+  const mobileMenu = (
+    <Drawer
+      anchor="left"
+      open={mobileMenuOpen}
+      onClose={() => setMobileMenuOpen(false)}
+      PaperProps={{
+        sx: {
+          width: '80%',
+          maxWidth: '300px',
+          border: 'none',
+          '& .MuiDrawer-paper': {
+            backgroundColor: '#fff',
+          },
+        },
+      }}
+    >
+      <List sx={{ pt: 0 }}>
+        <ListItem sx={{
+          backgroundColor: '#000',
+          color: '#fff',
+          py: 2,
+        }}>
+          <ListItemText 
+            primary="MENU" 
+            sx={{ 
+              '& .MuiListItemText-primary': {
+                fontWeight: 'bold',
+                fontSize: '1.2rem',
+              }
+            }}
+          />
+        </ListItem>
+        <ListItem>
+          <ListItemButton
+            onClick={() => handleMobileMenuClick(0)}
+            selected={currentTab === 0}
+            sx={{
+              '&.Mui-selected': {
+                backgroundColor: '#000',
+                color: '#fff',
+              },
+            }}
+          >
+            <ListItemText primary="Nouvelle évaluation" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem>
+          <ListItemButton
+            onClick={() => handleMobileMenuClick(1)}
+            selected={currentTab === 1}
+            sx={{
+              '&.Mui-selected': {
+                backgroundColor: '#000',
+                color: '#fff',
+              },
+            }}
+          >
+            <ListItemText primary="Visualisation" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem>
+          <ListItemButton
+            onClick={() => handleMobileMenuClick(2)}
+            selected={currentTab === 2}
+            sx={{
+              '&.Mui-selected': {
+                backgroundColor: '#000',
+                color: '#fff',
+              },
+            }}
+          >
+            <ListItemText primary="Analyse" />
+          </ListItemButton>
+        </ListItem>
+        {isAdmin && (
+          <ListItem>
+            <ListItemButton
+              onClick={() => handleMobileMenuClick(3)}
+              selected={currentTab === 3}
+              sx={{
+                '&.Mui-selected': {
+                  backgroundColor: '#000',
+                  color: '#fff',
+                },
+              }}
+            >
+              <ListItemText primary="Administration" />
+            </ListItemButton>
+          </ListItem>
+        )}
+      </List>
+    </Drawer>
+  );
+
   return (
     <ThemeProvider theme={theme}>
+      {mobileMenu}
       <Container 
         disableGutters 
         sx={{ 
           backgroundColor: '#fff',
           minHeight: '100vh',
-          width: '100vw',
-          maxWidth: '100vw !important',
+          width: '100%',
+          maxWidth: '100% !important',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          pt: 4,
-          pb: 4,
-          px: 1,
-          overflow: 'hidden',
+          pt: 2,
+          pb: 2,
+          m: 0,
+          p: 0,
         }}
       >
         <Box sx={{ 
           border: '4px solid black',
-          p: { xs: 2, sm: 3, md: 4 },
+          p: { xs: 1, sm: 2 },
           backgroundColor: '#f0f0f0',
-          width: '95%',
-          minWidth: 'auto',
-          maxWidth: '95%',
+          width: '80%',
+          minWidth: '80%',
+          maxWidth: '80%',
           overflow: 'auto',
-          mb: 4,
+          mb: 2,
+          mx: 'auto',
         }}>
           <Box sx={{ 
             display: 'flex', 
@@ -529,6 +636,22 @@ function App() {
                 version alpha
               </Typography>
             </Typography>
+            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+              <IconButton
+                onClick={() => setMobileMenuOpen(true)}
+                sx={{
+                  border: '2px solid black',
+                  borderRadius: 0,
+                  p: 1,
+                  '&:hover': {
+                    backgroundColor: '#000',
+                    color: '#fff',
+                  },
+                }}
+              >
+                <MenuIcon />
+              </IconButton>
+            </Box>
           </Box>
           
           {error && (
@@ -552,6 +675,7 @@ function App() {
           <Box sx={{ 
             borderBottom: '4px solid black',
             mb: 4,
+            display: { xs: 'none', md: 'block' },
           }}>
             <Tabs 
               value={currentTab} 
@@ -576,15 +700,15 @@ function App() {
               display: 'flex',
               justifyContent: 'center',
               width: '100%',
+              px: 0,
             }}>
               <Box sx={{ 
                 border: '2px solid black',
-                p: { xs: 3, sm: 4 },
+                p: { xs: 2, sm: 3 },
                 backgroundColor: '#fff',
-                width: '100%',
-                maxWidth: '800px',
+                width: '90%',
                 overflow: 'auto',
-                mb: 4,
+                mb: 2,
               }}>
                 <CollaborationForm
                   open={true}
@@ -607,14 +731,13 @@ function App() {
               flexDirection: 'column',
               alignItems: 'center',
               width: '100%',
-              maxWidth: '100%',
             }}>
               <Box sx={{ 
                 border: '2px solid black',
                 p: { xs: 2, sm: 3 },
-                mb: 4,
+                mb: 2,
                 backgroundColor: '#fff',
-                width: '80%',
+                width: '100%',
                 overflow: 'auto',
               }}>
                 <Toolbar
@@ -647,7 +770,7 @@ function App() {
               </Box>
 
               {loading ? (
-                <Box display="flex" justifyContent="center" alignItems="center" minHeight="600px" width="80%">
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight="600px" width="100%">
                   <CircularProgress sx={{ color: '#000' }} />
                 </Box>
               ) : (
@@ -655,7 +778,7 @@ function App() {
                   border: '2px solid black',
                   backgroundColor: '#fff',
                   height: '80vh',
-                  width: '80%',
+                  width: '100%',
                   overflow: 'hidden',
                 }}>
                   <GraphViewer 
@@ -678,12 +801,11 @@ function App() {
             }}>
               <Box sx={{ 
                 border: '2px solid black',
-                p: { xs: 3, sm: 4 },
+                p: { xs: 2, sm: 3 },
                 backgroundColor: '#fff',
                 width: '100%',
-                maxWidth: '800px',
                 overflow: 'auto',
-                mb: 4,
+                mb: 2,
               }}>
                 <AnalysisPanel
                   data={graphData}
@@ -703,12 +825,11 @@ function App() {
               }}>
                 <Box sx={{ 
                   border: '2px solid black',
-                  p: { xs: 3, sm: 4 },
+                  p: { xs: 2, sm: 3 },
                   backgroundColor: '#fff',
                   width: '100%',
-                  maxWidth: '800px',
                   overflow: 'auto',
-                  mb: 4,
+                  mb: 2,
                 }}>
                   <TeamManagement
                     members={graphData.nodes}
@@ -743,7 +864,9 @@ function App() {
             </Alert>
           </Snackbar>
         </Box>
-        <Footer />
+        <Box sx={{ width: { xs: '95%', md: '80%' } }}>
+          <Footer />
+        </Box>
       </Container>
     </ThemeProvider>
   );

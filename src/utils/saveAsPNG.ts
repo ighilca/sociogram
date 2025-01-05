@@ -1,5 +1,6 @@
 import Sigma from "sigma";
 import FileSaver from "file-saver";
+import logo from "../assets/coef.png";
 
 export default async function saveAsPNG(renderer: Sigma) {
   const { width, height } = renderer.getDimensions();
@@ -71,9 +72,32 @@ export default async function saveAsPNG(renderer: Sigma) {
     }
   });
 
+  // Add logo
+  const logoImg = new Image();
+  logoImg.src = logo;
+  await new Promise((resolve) => {
+    logoImg.onload = resolve;
+  });
+
+  // Calculate logo dimensions (80px height - doubled from 40px)
+  const logoHeight = 80 * pixelRatio;
+  const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
+
+  // Draw logo in bottom right corner with 5px margin
+  ctx.drawImage(
+    logoImg,
+    width * pixelRatio - logoWidth - 5 * pixelRatio,
+    height * pixelRatio - logoHeight - 5 * pixelRatio,
+    logoWidth,
+    logoHeight
+  );
+
   // Save as PNG
   canvas.toBlob((blob) => {
-    if (blob) FileSaver.saveAs(blob, "sociogram.png");
+    if (blob) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      FileSaver.saveAs(blob, `sociogram-${timestamp}.png`);
+    }
     
     // Cleanup
     tmpRenderer.kill();

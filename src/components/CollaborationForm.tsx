@@ -145,13 +145,15 @@ export default function CollaborationForm({
               key={member.id}
               sx={{
                 display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
                 justifyContent: 'space-between',
-                alignItems: 'center',
+                alignItems: { xs: 'flex-start', sm: 'center' },
                 py: 2,
+                gap: { xs: 2, sm: 0 },
                 borderBottom: '1px solid #eee',
               }}
             >
-              <Box>
+              <Box sx={{ width: '100%' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                   {member.label}
                 </Typography>
@@ -167,13 +169,14 @@ export default function CollaborationForm({
                     variant={scores[member.id] === value ? 'contained' : 'outlined'}
                     disabled={!currentUser}
                     sx={{
-                      minWidth: '36px',
-                      height: '36px',
+                      minWidth: { xs: '32px', sm: '36px' },
+                      height: { xs: '32px', sm: '36px' },
                       p: 0,
                       borderRadius: 0,
                       border: '1px solid black',
                       backgroundColor: scores[member.id] === value ? '#000' : '#fff',
                       color: scores[member.id] === value ? '#fff' : '#000',
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
                       '&:hover': {
                         backgroundColor: scores[member.id] === value ? '#000' : '#f0f0f0',
                         border: '1px solid black',
@@ -207,12 +210,16 @@ export default function CollaborationForm({
           disabled={isSubmitting || !allMembersEvaluated}
           sx={{
             borderRadius: 0,
-            backgroundColor: '#ccc',
-            color: '#000',
-            border: '1px solid #ccc',
+            backgroundColor: '#000',
+            color: '#fff',
+            border: '1px solid #000',
+            py: { xs: 1.5, sm: 2 },
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            whiteSpace: 'normal',
+            height: 'auto',
             '&:hover': {
-              backgroundColor: '#999',
-              border: '1px solid #999',
+              backgroundColor: '#333',
+              border: '1px solid #333',
             },
             '&.Mui-disabled': {
               backgroundColor: '#f5f5f5',

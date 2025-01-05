@@ -20,7 +20,7 @@ export default function Footer() {
         src={coefLogo}
         alt="Coefficience" 
         style={{ 
-          height: '40px',
+          height: '80px',
           width: 'auto',
         }} 
       />
