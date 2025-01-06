@@ -1,0 +1,10 @@
+[33me28bfba[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Corriger les erreurs de linter
+[33mb5a5367[m Désactiver temporairement l'authentification
+[33ma13e58b[m Amélioration du centrage du graphe et uniformisation de la taille des nœuds
+[33md00eb88[m Fix TypeScript error in GraphLegend component
+[33m1091ec3[m Update configuration for deployment and fix graph legend
+[33m11b3068[m feat: double la taille du logo dans le footer
+[33m05232e8[m style: simplification du footer
+[33m4d8b533[m feat: amélioration des filtres - connexions directes pour le filtre par nom
+[33meddbd6b[m style: amélioration du style de la modale de confirmation de suppression
+[33mde352c2[m fix: amélioration de la fonction de téléchargement du graphe
