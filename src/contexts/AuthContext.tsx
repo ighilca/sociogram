@@ -3,48 +3,34 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
+  session: {
+    user: {
+      id: string;
+      email: string;
+    }
+  };
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  signOut: async () => {},
+  session: {
+    user: {
+      id: '',
+      email: '',
+    }
+  }
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Vérifier la session actuelle
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Écouter les changements d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-    } catch (error) {
-      console.error('Error signing out:', error);
+  // Simuler un utilisateur connecté
+  const [session] = useState({
+    user: {
+      id: 'temp-user',
+      email: 'user@example.com',
     }
-  };
+  });
 
   return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
+    <AuthContext.Provider value={{ session }}>
       {children}
     </AuthContext.Provider>
   );
