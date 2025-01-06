@@ -25,9 +25,8 @@ const calculateAverageScore = (nodeId: string, edges: CollaborationEdge[]): numb
     : 0;
 };
 
-const calculateNodeSize = (nodeId: string, edges: CollaborationEdge[], baseSize: number): number => {
-  const avgScore = calculateAverageScore(nodeId, edges);
-  return baseSize * (1 + (avgScore * 0.5));
+const calculateNodeSize = (_: string, __: CollaborationEdge[], baseSize: number): number => {
+  return baseSize; // Taille uniforme pour tous les nœuds
 };
 
 const calculateNodeColor = (nodeId: string, edges: CollaborationEdge[]): string => {
@@ -120,8 +119,22 @@ const GraphLegend = () => {
   );
 };
 
+const arrangeNodesInCircle = (graph: Graph) => {
+  const nodes = Array.from(graph.nodes());
+  const radius = 10;
+  
+  nodes.forEach((nodeId, index) => {
+    const angle = (index * 2 * Math.PI) / nodes.length;
+    const x = radius * Math.cos(angle);
+    const y = radius * Math.sin(angle);
+    graph.setNodeAttribute(nodeId, 'x', x);
+    graph.setNodeAttribute(nodeId, 'y', y);
+  });
+};
+
 export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter, departmentFilter }: GraphViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const legendRef = useRef<HTMLDivElement>(null);
   const sigmaRef = useRef<Sigma | null>(null);
   const graphRef = useRef<Graph | null>(null);
   const draggedNodeRef = useRef<string | null>(null);
@@ -129,15 +142,18 @@ export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter, de
 
   const handleDownload = async () => {
     if (!sigmaRef.current) return;
-    await saveAsPNG(sigmaRef.current);
+    await saveAsPNG(sigmaRef.current, legendRef.current);
   };
 
   // Initialize graph only once
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Create a new graph instance
-    const graph = new Graph();
+    // Create a new graph instance with multi-edges enabled
+    const graph = new Graph({
+      multi: true,
+      allowSelfLoops: false,
+    });
     graphRef.current = graph;
 
     // Initialize sigma
@@ -218,7 +234,7 @@ export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter, de
         sigmaRef.current.kill();
       }
     };
-  }, []); // Empty dependency array means this only runs once
+  }, []);
 
   // Update graph data when props change
   useEffect(() => {
@@ -281,38 +297,49 @@ export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter, de
       filteredNodes = departmentNodes;
     }
 
-    // Ajouter les nœuds filtrés
-    filteredNodes.forEach((node) => {
+    // Add filtered nodes and edges
+    filteredNodes.forEach(node => {
       graph.addNode(node.id, {
         ...node,
-        x: Math.random() * 10 - 5,
-        y: Math.random() * 10 - 5,
-        size: calculateNodeSize(node.id, data.edges, nodeSize),
-        color: calculateNodeColor(node.id, data.edges),
-        label: node.label || '',
+        size: calculateNodeSize(node.id, filteredEdges, nodeSize),
+        color: calculateNodeColor(node.id, filteredEdges),
       });
     });
 
-    // Ajouter les arêtes filtrées
-    filteredEdges.forEach((edge) => {
+    // Add filtered edges to graph
+    const addedEdges = new Set<string>();
+    filteredEdges.forEach(edge => {
+      const baseEdgeId = `${edge.source}-${edge.target}`;
+      let edgeId = baseEdgeId;
+      let index = 0;
+      
+      while (addedEdges.has(edgeId)) {
+        index++;
+        edgeId = `${baseEdgeId}-${index}`;
+      }
+      
+      addedEdges.add(edgeId);
+      
       try {
-        graph.addEdge(edge.source, edge.target, {
-          size: 3,
-          label: edge.score.toString(),
-          color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS] || '#000000',
+        graph.addEdgeWithKey(edgeId, edge.source, edge.target, {
+          ...edge,
           type: 'curvedArrow',
-          forceLabel: true,
-          labelSize: 12,
-          labelColor: '#000000',
-          curvature: 0.3,
+          size: 1,
+          color: COLLABORATION_COLORS[edge.score as keyof typeof COLLABORATION_COLORS],
         });
-      } catch (err) {
-        console.warn(`Impossible d'ajouter l'arête ${edge.source}->${edge.target}:`, err);
+      } catch (error) {
+        console.warn(`Impossible d'ajouter l'arête ${edgeId}:`, error);
       }
     });
 
-    // Force a refresh of the graph
+    // Arrange nodes in circle
+    arrangeNodesInCircle(graph);
+
+    // Force sigma to refresh
     sigmaRef.current.refresh();
+
+    // Utiliser la même méthode que le bouton de centrage
+    sigmaRef.current.getCamera().animatedReset({ duration: 0 });
 
   }, [data, nodeSize, nameFilter, departmentFilter]);
 
@@ -324,13 +351,18 @@ export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter, de
       height: '100%',
       width: '100%',
       position: 'relative',
+      alignItems: 'center',
+      justifyContent: 'center',
     }}>
       <div 
         ref={containerRef} 
         className="sigma-container"
         style={{
-          height: '100%',
+          height: '80vh',
           width: '100%',
+          minHeight: '500px',
+          maxWidth: '1200px',
+          margin: '0 auto',
           cursor: isDragging ? 'grabbing' : 'grab',
           backgroundColor: '#fff',
           backgroundImage: `
@@ -340,7 +372,9 @@ export default function GraphViewer({ data, nodeSize, onEvaluate, nameFilter, de
           backgroundSize: '20px 20px'
         }}
       />
-      <GraphLegend />
+      <Box ref={legendRef}>
+        <GraphLegend />
+      </Box>
       <Box 
         onClick={handleDownload}
         sx={{

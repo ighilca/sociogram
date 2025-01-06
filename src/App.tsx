@@ -10,6 +10,9 @@ import { TeamMember, CollaborationEdge } from './types/graph'
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Footer from './components/Footer';
 import MenuIcon from '@mui/icons-material/Menu';
+import Auth from './components/Auth';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -103,7 +106,8 @@ const theme = createTheme({
   },
 });
 
-function App() {
+function AppContent() {
+  const { signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nodeSize, setNodeSize] = useState(10);
@@ -607,7 +611,6 @@ function App() {
           maxWidth: '80%',
           overflow: 'auto',
           mb: 2,
-          mx: 'auto',
         }}>
           <Box sx={{ 
             display: 'flex', 
@@ -636,9 +639,9 @@ function App() {
                 version alpha
               </Typography>
             </Typography>
-            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <IconButton
-                onClick={() => setMobileMenuOpen(true)}
+                onClick={signOut}
                 sx={{
                   border: '2px solid black',
                   borderRadius: 0,
@@ -648,9 +651,26 @@ function App() {
                     color: '#fff',
                   },
                 }}
+                title="Se déconnecter"
               >
-                <MenuIcon />
+                <LogoutIcon />
               </IconButton>
+              <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                <IconButton
+                  onClick={() => setMobileMenuOpen(true)}
+                  sx={{
+                    border: '2px solid black',
+                    borderRadius: 0,
+                    p: 1,
+                    '&:hover': {
+                      backgroundColor: '#000',
+                      color: '#fff',
+                    },
+                  }}
+                >
+                  <MenuIcon />
+                </IconButton>
+              </Box>
             </Box>
           </Box>
           
@@ -872,5 +892,30 @@ function App() {
   );
 }
 
-export default App
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppWrapper />
+    </AuthProvider>
+  );
+}
+
+function AppWrapper() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <Box sx={{ 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return user ? <AppContent /> : <Auth />;
+}
 
