@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Box, TextField, Button, Typography, Alert, Container, Paper, List, ListItem, ListItemIcon, ListItemText, AlertTitle, Snackbar } from '@mui/material';
+import { Box, TextField, Button, Typography, Alert, Container, Paper, List, ListItem, ListItemIcon, ListItemText, AlertTitle, Snackbar, CircularProgress } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import coefLogo from '../assets/coef.png';
 
 interface PasswordCriteria {
   minLength: boolean;
@@ -14,13 +15,14 @@ interface PasswordCriteria {
 }
 
 export default function Auth() {
-  const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [passwordCriteria, setPasswordCriteria] = useState<PasswordCriteria>({
     minLength: false,
     hasUpperCase: false,
@@ -34,6 +36,31 @@ export default function Auth() {
     severity: 'success' | 'error' | 'info';
     open: boolean;
   } | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [lastResetAttempt, setLastResetAttempt] = useState<number>(0);
+
+  useEffect(() => {
+    // Vérifier si nous sommes dans un contexte de réinitialisation de mot de passe
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
+      setMode('reset');
+      // Récupérer le token de réinitialisation en gérant le double #
+      const hashParts = hash.split('#');
+      const lastPart = hashParts[hashParts.length - 1];
+      
+      // Extraire le token directement de la chaîne
+      const tokenMatch = lastPart.match(/access_token=([^&]+)/);
+      const token = tokenMatch ? tokenMatch[1] : null;
+      
+      if (token) {
+        console.log('Token trouvé');
+        setAccessToken(token);
+      } else {
+        console.log('Hash reçu:', hash);
+        console.log('Dernière partie:', lastPart);
+      }
+    }
+  }, []);
 
   const validatePassword = (pass: string, confirm: string) => {
     setPasswordCriteria({
@@ -140,6 +167,109 @@ export default function Auth() {
     setConfirmPassword('');
   };
 
+  const handleResetPassword = async () => {
+    try {
+      setError(null);
+      setSuccess(null);
+      setResetLoading(true);
+
+      if (!email) {
+        setError('Veuillez entrer votre adresse email');
+        return;
+      }
+
+      // Vérifier le délai depuis la dernière tentative
+      const now = Date.now();
+      const timeSinceLastAttempt = now - lastResetAttempt;
+      if (timeSinceLastAttempt < 30000) { // 30 secondes
+        const remainingSeconds = Math.ceil((30000 - timeSinceLastAttempt) / 1000);
+        setError(`Pour des raisons de sécurité, veuillez attendre ${remainingSeconds} secondes avant de réessayer.`);
+        return;
+      }
+
+      console.log('Tentative de réinitialisation pour:', email);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+
+      if (error) {
+        console.error('Détails complets de l\'erreur:', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          details: error,
+          stack: error.stack
+        });
+        
+        if (error.message.includes('rate limit')) {
+          throw new Error('Trop de tentatives. Veuillez réessayer plus tard.');
+        } else if (error.message.includes('Email not found')) {
+          throw new Error('Cette adresse email n\'est pas enregistrée dans notre système.');
+        } else if (error.status === 500) {
+          throw new Error('Le service de réinitialisation est temporairement indisponible. Veuillez réessayer plus tard.');
+        } else {
+          throw new Error(`Impossible d'envoyer l'email de réinitialisation : ${error.message}`);
+        }
+      }
+
+      setLastResetAttempt(now);
+      setSuccess('Un email de réinitialisation de mot de passe vous a été envoyé. Veuillez vérifier votre boîte de réception.');
+      setPassword('');
+    } catch (err: any) {
+      console.error('Error resetting password:', err);
+      setError(err.message || 'Erreur lors de la réinitialisation du mot de passe');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setError(null);
+      setLoading(true);
+
+      if (!isPasswordValid()) {
+        setError('Le mot de passe ne respecte pas les critères de sécurité');
+        return;
+      }
+
+      if (!accessToken) {
+        throw new Error('Token de réinitialisation manquant. Veuillez recommencer le processus.');
+      }
+
+      // Extraire l'email du token JWT
+      const tokenParts = accessToken.split('.');
+      if (tokenParts.length !== 3) throw new Error('Token invalide');
+      
+      const tokenPayload = JSON.parse(atob(tokenParts[1]));
+      const email = tokenPayload.email;
+
+      if (!email) throw new Error('Email non trouvé dans le token');
+
+      // Mettre à jour le mot de passe
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (error) throw error;
+
+      setSuccess('Votre mot de passe a été mis à jour avec succès. Vous allez être redirigé vers la page de connexion.');
+      setPassword('');
+      setConfirmPassword('');
+      
+      // Rediriger vers la page de connexion après 2 secondes
+      setTimeout(() => {
+        setMode('login');
+        window.location.hash = '';
+      }, 2000);
+    } catch (err: any) {
+      console.error('Error updating password:', err);
+      setError(err.message || 'Erreur lors de la mise à jour du mot de passe');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Container maxWidth="sm">
       <Box sx={{ 
@@ -159,6 +289,22 @@ export default function Auth() {
             bgcolor: '#ffffff'
           }}
         >
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            mb: 4 
+          }}>
+            <img 
+              src={coefLogo} 
+              alt="COEF Logo" 
+              style={{ 
+                height: '80px',
+                width: 'auto',
+                marginBottom: '1rem'
+              }} 
+            />
+          </Box>
+
           <Typography 
             variant="h4" 
             component="h1" 
@@ -171,7 +317,9 @@ export default function Auth() {
               letterSpacing: 1
             }}
           >
-            {mode === 'login' ? 'Connexion' : 'Inscription'}
+            {mode === 'login' ? 'Connexion' : 
+             mode === 'signup' ? 'Inscription' : 
+             'Réinitialisation du mot de passe'}
           </Typography>
 
           {error && (
@@ -207,101 +355,28 @@ export default function Auth() {
                 }
               }}
             >
-              <AlertTitle sx={{ fontWeight: 'bold' }}>Inscription réussie !</AlertTitle>
-              <Typography variant="body2" paragraph>
-                Un email de confirmation a été envoyé à <strong>{email}</strong>.
-              </Typography>
-              <Typography variant="body2">
-                Veuillez vérifier votre boîte de réception et cliquer sur le lien de confirmation pour activer votre compte.
-                Si vous ne trouvez pas l'email, pensez à vérifier vos spams.
-              </Typography>
-              <Box sx={{ mt: 2 }}>
-                <Button 
-                  variant="outlined" 
-                  size="small"
-                  onClick={() => setMode('login')}
-                  sx={{
-                    borderRadius: 0,
-                    borderColor: '#000000',
-                    color: '#000000',
-                    '&:hover': {
-                      borderColor: '#000000',
-                      bgcolor: '#00000010'
-                    }
-                  }}
-                >
-                  Aller à la page de connexion
-                </Button>
-              </Box>
+              <AlertTitle sx={{ fontWeight: 'bold' }}>
+                {mode === 'signup' ? 'Inscription réussie !' : 
+                 mode === 'reset' ? 'Mot de passe mis à jour !' :
+                 'Email envoyé !'}
+              </AlertTitle>
+              {success}
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleAuth} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 0,
-                  '& fieldset': {
-                    borderColor: '#000000',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#000000',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#000000',
-                  },
-                },
-                '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#000000',
-                },
-              }}
-            />
-            <TextField
-              label="Mot de passe"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              fullWidth
-              error={mode === 'signup' && password.length > 0 && !isPasswordValid()}
-              helperText={mode === 'signup' && password.length > 0 && !isPasswordValid() ? 
-                "Le mot de passe doit respecter tous les critères ci-dessous" : ""}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 0,
-                  '& fieldset': {
-                    borderColor: '#000000',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#000000',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#000000',
-                  },
-                },
-                '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#000000',
-                },
-              }}
-            />
-
-            {mode === 'signup' && (
+          <Box 
+            component="form" 
+            onSubmit={mode === 'reset' ? handleUpdatePassword : handleAuth} 
+            sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+          >
+            {mode !== 'reset' && (
               <TextField
-                label="Confirmer le mot de passe"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 fullWidth
-                error={confirmPassword.length > 0 && !passwordCriteria.passwordsMatch}
-                helperText={confirmPassword.length > 0 && !passwordCriteria.passwordsMatch ? 
-                  "Les mots de passe ne correspondent pas" : ""}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 0,
@@ -322,21 +397,64 @@ export default function Auth() {
               />
             )}
 
-            {mode === 'signup' && (
-              <List dense sx={{ 
-                bgcolor: '#f5f5f5', 
-                mt: 1,
-                border: '1px solid #000000',
-                p: 2
-              }}>
-                <Typography variant="subtitle2" sx={{ 
-                  fontWeight: 'bold', 
-                  mb: 1,
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.5
-                }}>
-                  Critères du mot de passe :
-                </Typography>
+            {(mode === 'login' || mode === 'signup' || mode === 'reset') && (
+              <TextField
+                label="Mot de passe"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                fullWidth
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 0,
+                    '& fieldset': {
+                      borderColor: '#000000',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#000000',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#000000',
+                    },
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: '#000000',
+                  },
+                }}
+              />
+            )}
+
+            {(mode === 'signup' || mode === 'reset') && (
+              <TextField
+                label="Confirmer le mot de passe"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                fullWidth
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 0,
+                    '& fieldset': {
+                      borderColor: '#000000',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#000000',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#000000',
+                    },
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: '#000000',
+                  },
+                }}
+              />
+            )}
+
+            {(mode === 'signup' || mode === 'reset') && (
+              <List dense sx={{ bgcolor: '#f5f5f5', p: 2 }}>
                 <ListItem>
                   <ListItemIcon>
                     {passwordCriteria.minLength ? 
@@ -375,7 +493,7 @@ export default function Auth() {
                       <CheckCircleIcon color="success" /> : 
                       <CancelIcon color="error" />}
                   </ListItemIcon>
-                  <ListItemText primary="Au moins un caractère spécial (!@#$%^&*)" />
+                  <ListItemText primary="Au moins un caractère spécial" />
                 </ListItem>
                 <ListItem>
                   <ListItemIcon>
@@ -391,7 +509,7 @@ export default function Auth() {
             <Button
               type="submit"
               variant="contained"
-              disabled={loading || (mode === 'signup' && !isPasswordValid())}
+              disabled={loading || ((mode === 'signup' || mode === 'reset') && !isPasswordValid())}
               fullWidth
               sx={{ 
                 mt: 2,
@@ -409,27 +527,55 @@ export default function Auth() {
                 }
               }}
             >
-              {loading ? 'Chargement...' : mode === 'login' ? 'Se connecter' : "S'inscrire"}
+              {loading ? (
+                <CircularProgress size={24} sx={{ color: 'white' }} />
+              ) : mode === 'login' ? (
+                'Se connecter'
+              ) : mode === 'signup' ? (
+                "S'inscrire"
+              ) : (
+                'Mettre à jour le mot de passe'
+              )}
             </Button>
-          </Box>
 
-          <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Button
-              onClick={resetForm}
-              sx={{ 
-                textTransform: 'none',
-                color: '#000000',
-                textDecoration: 'underline',
-                '&:hover': {
-                  bgcolor: 'transparent',
-                  textDecoration: 'none'
-                }
-              }}
-            >
-              {mode === 'login' 
-                ? "Pas encore de compte ? S'inscrire" 
-                : 'Déjà un compte ? Se connecter'}
-            </Button>
+            {mode === 'login' && (
+              <Button
+                fullWidth
+                variant="outlined"
+                disabled={resetLoading}
+                onClick={handleResetPassword}
+                sx={{
+                  color: '#000',
+                  borderColor: '#000',
+                  '&:hover': { 
+                    bgcolor: '#f5f5f5',
+                    borderColor: '#000'
+                  },
+                  height: '48px',
+                  borderRadius: 0,
+                }}
+              >
+                {resetLoading ? (
+                  <CircularProgress size={24} sx={{ color: 'black' }} />
+                ) : (
+                  'Mot de passe oublié ?'
+                )}
+              </Button>
+            )}
+
+            {mode !== 'reset' && (
+              <Button
+                fullWidth
+                variant="text"
+                onClick={resetForm}
+                sx={{
+                  color: '#666',
+                  '&:hover': { bgcolor: '#f5f5f5' },
+                }}
+              >
+                {mode === 'login' ? 'Créer un compte' : 'Déjà un compte ?'}
+              </Button>
+            )}
           </Box>
         </Paper>
       </Box>

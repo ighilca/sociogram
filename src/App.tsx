@@ -13,6 +13,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import Auth from './components/Auth';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LogoutIcon from '@mui/icons-material/Logout';
+import AdminPanel from './components/AdminPanel';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -115,7 +116,8 @@ function AppContent() {
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [currentTab, setCurrentTab] = useState(0);
-  const [isAdmin] = useState(true);
+  const { user } = useAuth();
+  const [isAdmin] = useState(user?.email === 'ighildjam@gmail.com');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const [graphData, setGraphData] = useState<{
@@ -579,6 +581,22 @@ function AppContent() {
             </ListItemButton>
           </ListItem>
         )}
+        {isAdmin && (
+          <ListItem>
+            <ListItemButton
+              onClick={() => handleMobileMenuClick(4)}
+              selected={currentTab === 4}
+              sx={{
+                '&.Mui-selected': {
+                  backgroundColor: '#000',
+                  color: '#fff',
+                },
+              }}
+            >
+              <ListItemText primary="Gestion des utilisateurs" />
+            </ListItemButton>
+          </ListItem>
+        )}
       </List>
     </Drawer>
   );
@@ -640,6 +658,15 @@ function AppContent() {
               </Typography>
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Typography 
+                sx={{ 
+                  display: { xs: 'none', sm: 'block' },
+                  fontFamily: 'monospace',
+                  fontSize: '0.9rem'
+                }}
+              >
+                {user?.email}
+              </Typography>
               <IconButton
                 onClick={signOut}
                 sx={{
@@ -712,6 +739,7 @@ function AppContent() {
               <Tab label="Visualisation" />
               <Tab label="Analyse" />
               {isAdmin && <Tab label="Administration" />}
+              {isAdmin && <Tab label="Gestion des utilisateurs" />}
             </Tabs>
           </Box>
 
@@ -858,6 +886,27 @@ function AppContent() {
                     onDeleteMember={handleDeleteMember}
                     setNotification={setNotification}
                   />
+                </Box>
+              </Box>
+            </TabPanel>
+          )}
+
+          {isAdmin && (
+            <TabPanel value={currentTab} index={4}>
+              <Box sx={{ 
+                display: 'flex',
+                justifyContent: 'center',
+                width: '100%',
+              }}>
+                <Box sx={{ 
+                  border: '2px solid black',
+                  p: { xs: 2, sm: 3 },
+                  backgroundColor: '#fff',
+                  width: '100%',
+                  overflow: 'auto',
+                  mb: 2,
+                }}>
+                  <AdminPanel />
                 </Box>
               </Box>
             </TabPanel>
