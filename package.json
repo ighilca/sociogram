@@ -1,7 +1,7 @@
 {
   "name": "sociogram",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.1-17-01-2025",
   "type": "module",
   "scripts": {
     "dev": "vite",
