@@ -73,21 +73,33 @@ export default function AdminPanel() {
         return;
       }
 
-      const { error } = await supabase.rpc('invite_user', {
-        user_email: newUserEmail
+      // Envoyer une invitation par email avec création d'utilisateur
+      const { error: signInError } = await supabase.auth.signInWithOtp({
+        email: newUserEmail,
+        options: {
+          shouldCreateUser: true,
+          emailRedirectTo: `${window.location.origin}/sociogram/`,
+          data: {
+            is_admin: false
+          }
+        }
       });
 
-      if (error) throw error;
+      if (signInError) {
+        console.error('Error sending invitation:', signInError);
+        setError('Erreur lors de l\'envoi de l\'invitation: ' + signInError.message);
+        return;
+      }
 
-      setSuccessMessage('Un email d\'invitation a été envoyé à l\'utilisateur');
+      setSuccessMessage('Email d\'invitation envoyé avec succès');
       setOpenDialog(false);
       setNewUserEmail('');
       
       // Rafraîchir la liste après un court délai
       setTimeout(fetchUsers, 1000);
     } catch (err) {
-      console.error('Error creating user:', err);
-      setError('Erreur lors de la création de l\'utilisateur');
+      console.error('Error inviting user:', err);
+      setError('Erreur lors de l\'invitation de l\'utilisateur');
     }
   };
 
@@ -95,14 +107,23 @@ export default function AdminPanel() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) return;
 
     try {
-      const { error } = await supabase.rpc('delete_user', {
+      const { data, error } = await supabase.rpc('delete_user', {
         user_id: userId
       });
-      
-      if (error) throw error;
+
+      if (error) {
+        console.error('Error deleting user:', error);
+        setError('Erreur lors de la suppression de l\'utilisateur');
+        return;
+      }
+
+      if (data && !data.success) {
+        setError(data.message);
+        return;
+      }
 
       setUsers(prev => prev.filter(user => user.id !== userId));
-      setSuccessMessage('Utilisateur supprimé avec succès');
+      setSuccessMessage(data.message);
     } catch (err) {
       console.error('Error deleting user:', err);
       setError('Erreur lors de la suppression de l\'utilisateur');

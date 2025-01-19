@@ -5,6 +5,11 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/sociogram/',
+  server: {
+    hmr: {
+      path: '/sociogram/ws'
+    }
+  },
   build: {
     rollupOptions: {
       output: {
