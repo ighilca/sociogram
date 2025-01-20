@@ -2,6 +2,7 @@ import { Dialog, DialogTitle, DialogContent, Button, Select, MenuItem, FormContr
 import { TeamMember } from '../types/graph';
 import { useState } from 'react';
 import { SelectChangeEvent } from '@mui/material/Select';
+import { EvaluationScale } from './EvaluationScale';
 
 export interface CollaborationFormProps {
   open: boolean;
@@ -235,6 +236,10 @@ export default function CollaborationForm({
               : `ÉVALUER TOUS LES MEMBRES (${Object.keys(scores).length}/${membersToEvaluate.length})`
           }
         </Button>
+      </Box>
+
+      <Box sx={{ mt: 4, pt: 4, borderTop: '2px solid #eee' }}>
+        <EvaluationScale />
       </Box>
     </Box>
   );

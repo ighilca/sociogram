@@ -17,6 +17,7 @@ import {
 import { TeamMember, CollaborationEdge } from '../types/graph';
 import DownloadIcon from '@mui/icons-material/Download';
 import { COLLABORATION_COLORS } from '../types/graph';
+import { EvaluationScale } from './EvaluationScale';
 
 interface AnalysisPanelProps {
   data: {
@@ -113,12 +114,15 @@ export default function AnalysisPanel({ data, currentUser, isAdmin = false }: An
   };
 
   return (
-    <Paper sx={{ mt: 3 }}>
+    <Paper elevation={3} sx={{ p: 2, height: '100%', overflow: 'auto' }}>
+      <Typography variant="h5" gutterBottom>
+        Analyse des Collaborations
+      </Typography>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={tabValue} onChange={handleTabChange}>
-          <Tab label="Vue d'ensemble" />
-          <Tab label="Analyse détaillée" />
-          {isAdmin && <Tab label="Comparaison" />}
+          <Tab label="Statistiques" />
+          <Tab label="Recommandations" />
+          <Tab label="Échelle d'Évaluation" />
         </Tabs>
       </Box>
 
@@ -229,15 +233,20 @@ export default function AnalysisPanel({ data, currentUser, isAdmin = false }: An
         </TableContainer>
       </TabPanel>
 
+      <TabPanel value={tabValue} index={2}>
+        <EvaluationScale />
+      </TabPanel>
+
       {isAdmin && (
-        <TabPanel value={tabValue} index={2}>
-          <Typography variant="h6" gutterBottom>
-            Comparaison temporelle
-          </Typography>
-          <Typography color="text.secondary">
-            Fonctionnalité à venir : Comparaison des sociogrammes dans le temps
-          </Typography>
-        </TabPanel>
+        <Box sx={{ mt: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<DownloadIcon />}
+            onClick={exportData}
+          >
+            Exporter les données
+          </Button>
+        </Box>
       )}
     </Paper>
   );

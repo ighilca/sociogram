@@ -14,6 +14,7 @@ import Auth from './components/Auth';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AdminPanel from './components/AdminPanel';
+import { EvaluationScale } from './components/EvaluationScale';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -822,21 +823,32 @@ function AppContent() {
                   <CircularProgress sx={{ color: '#000' }} />
                 </Box>
               ) : (
-                <Box sx={{ 
-                  border: '2px solid black',
-                  backgroundColor: '#fff',
-                  height: '80vh',
-                  width: '100%',
-                  overflow: 'hidden',
-                }}>
-                  <GraphViewer 
-                    data={graphData}
-                    nodeSize={nodeSize}
-                    onEvaluate={handleEvaluateClick}
-                    nameFilter={nameFilter}
-                    departmentFilter={departmentFilter}
-                  />
-                </Box>
+                <>
+                  <Box sx={{ 
+                    border: '2px solid black',
+                    backgroundColor: '#fff',
+                    height: '80vh',
+                    width: '100%',
+                    overflow: 'hidden',
+                    mb: 3,
+                  }}>
+                    <GraphViewer 
+                      data={graphData}
+                      nodeSize={nodeSize}
+                      onEvaluate={handleEvaluateClick}
+                      nameFilter={nameFilter}
+                      departmentFilter={departmentFilter}
+                    />
+                  </Box>
+                  <Box sx={{ 
+                    border: '2px solid black',
+                    backgroundColor: '#fff',
+                    width: '100%',
+                    p: 3,
+                  }}>
+                    <EvaluationScale />
+                  </Box>
+                </>
               )}
             </Box>
           </TabPanel>
