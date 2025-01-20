@@ -646,7 +646,7 @@ function AppContent() {
               textTransform: 'uppercase',
               letterSpacing: '-1px',
             }}>
-              Sociogramme
+              NUCLEUS
               <Typography component="sup" sx={{
                 fontSize: '0.5em',
                 verticalAlign: 'super',

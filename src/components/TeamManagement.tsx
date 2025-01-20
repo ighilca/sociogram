@@ -40,6 +40,7 @@ interface MemberFormData {
   label: string;
   role: string;
   department: string;
+  email: string;
 }
 
 interface Role {
@@ -70,6 +71,7 @@ export default function TeamManagement({
     label: '',
     role: '',
     department: '',
+    email: '',
   });
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
   const [membersToDelete, setMembersToDelete] = useState<string[]>([]);
@@ -147,7 +149,7 @@ export default function TeamManagement({
       const uniqueDepts = new Set<string>();
       
       lines.forEach(line => {
-        const [_, roleName, deptName] = line.split(',').map(s => s.trim());
+        const [_, __, roleName, deptName] = line.split(',').map(s => s.trim());
         if (roleName && deptName) {
           uniqueRoles.add(roleName);
           uniqueDepts.add(deptName);
@@ -196,7 +198,7 @@ export default function TeamManagement({
 
       // Maintenant ajouter les membres
       for (const line of lines) {
-        const [label, roleName, deptName] = line.split(',').map(s => s.trim());
+        const [label, email, roleName, deptName] = line.split(',').map(s => s.trim());
         if (label && roleName && deptName) {
           try {
             // Vérifier si le rôle existe maintenant
@@ -211,6 +213,7 @@ export default function TeamManagement({
             
             await onAddMember({
               label,
+              email,
               role: role.name,
               department: dept.name,
             });
@@ -279,6 +282,7 @@ export default function TeamManagement({
       label: '',
       role: '',
       department: '',
+      email: '',
     });
   };
 
@@ -288,6 +292,7 @@ export default function TeamManagement({
       label: member.label,
       role: member.role,
       department: member.department,
+      email: member.email || '',
     });
     setShowAddDialog(true);
   };
@@ -479,6 +484,26 @@ export default function TeamManagement({
               }}
             />
 
+            <TextField
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={handleTextChange('email')}
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 0,
+                  border: '2px solid black',
+                  '&:hover': {
+                    borderColor: '#000',
+                  },
+                  '&.Mui-focused': {
+                    borderColor: '#000',
+                  },
+                },
+              }}
+            />
+
             <FormControl fullWidth>
               <InputLabel>Rôle</InputLabel>
               <Select
@@ -597,7 +622,7 @@ export default function TeamManagement({
             p: 2,
           }}>
             <Typography variant="body2" sx={{ mb: 2 }}>
-              Format: nom,rôle,département (un par ligne)
+              Format: nom,email,rôle,département (un par ligne)
             </Typography>
             <TextField
               multiline

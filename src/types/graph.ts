@@ -3,6 +3,7 @@ export interface TeamMember {
   label: string;
   role: string;
   department: string;
+  email?: string;
   x?: number;
   y?: number;
 }
